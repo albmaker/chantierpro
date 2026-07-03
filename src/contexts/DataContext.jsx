@@ -1,22 +1,23 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase, getCurrentUser } from '../lib/supabase'
-import { fetchDevis, createDevis as apiCreateDevis, updateDevis as apiUpdateDevis, deleteDevis as apiDeleteDevis, fetchFactures, createFacture as apiCreateFacture, getProfile as apiGetProfile, upsertProfile as apiUpsertProfile } from '../lib/supabase'
+import {
+  fetchDevis, createDevis as apiCreateDevis, updateDevis as apiUpdateDevis, deleteDevis as apiDeleteDevis,
+  fetchFactures, createFacture as apiCreateFacture, updateFacture as apiUpdateFacture,
+  getProfile as apiGetProfile, upsertProfile as apiUpsertProfile
+} from '../lib/supabase'
 
 const DataContext = createContext(null)
 
-const STORAGE_KEYS = {
-  devis: 'chantierpro_devis',
-  factures: 'chantierpro_factures',
-  profile: 'chantierpro_profile',
-  plan: 'chantierpro_plan',
-  user: 'chantierpro_user',
-  clients: 'chantierpro_clients',
-  templates: 'chantierpro_templates',
-  activity: 'chantierpro_activity',
-  customObjectives: 'chantierpro_custom_objectives',
+// === ISOLATION PAR USER (sécurité) ===
+// Chaque user a ses propres clés de stockage
+function getStorageKey(baseKey, userId) {
+  if (!userId) return null // Pas d'user = pas de cache
+  return `chantierpro_${userId}_${baseKey}`
 }
 
-function loadFromStorage(key, defaultValue) {
+function loadFromStorage(baseKey, userId, defaultValue) {
+  if (!userId) return defaultValue
+  const key = getStorageKey(baseKey, userId)
   try {
     const stored = localStorage.getItem(key)
     return stored ? JSON.parse(stored) : defaultValue
@@ -25,12 +26,23 @@ function loadFromStorage(key, defaultValue) {
   }
 }
 
-function saveToStorage(key, value) {
+function saveToStorage(baseKey, userId, value) {
+  if (!userId) return
+  const key = getStorageKey(baseKey, userId)
   try {
     localStorage.setItem(key, JSON.stringify(value))
   } catch (e) {
     console.error('Storage error:', e)
   }
+}
+
+function clearAllUserData(userId) {
+  if (!userId) return
+  const baseKeys = ['devis', 'factures', 'profile', 'plan', 'clients', 'templates', 'activity', 'customObjectives']
+  baseKeys.forEach(bk => {
+    const key = getStorageKey(bk, userId)
+    if (key) localStorage.removeItem(key)
+  })
 }
 
 const DEFAULT_PROFILE = {
@@ -42,13 +54,13 @@ const DEFAULT_PROFILE = {
   tva: '',
   iban: '',
   banque: '',
-  cgv: '- Acompte de 30% \u00e0 la commande\n- Solde \u00e0 la livraison\n- D\u00e9lai de paiement : 30 jours',
+  cgv: '- Acompte de 30% à la commande\n- Solde à la livraison\n- Délai de paiement : 30 jours',
 }
 
 const DEFAULT_TEMPLATES = [
   {
     id: 'tpl-plomberie',
-    name: 'Plomberie - R\u00e9novation salle de bain',
+    name: 'Plomberie - Rénovation salle de bain',
     metier: 'plomberie',
     lignes: [
       { ref: 'PLO-001', label: 'Pose WC suspendu', qty: 1, unit: 'forfait', priceHT: 450, tva: 10 },
@@ -58,38 +70,42 @@ const DEFAULT_TEMPLATES = [
   },
   {
     id: 'tpl-electricite',
-    name: 'Electricit\u00e9 - Mise aux normes',
+    name: 'Electricité - Mise aux normes',
     metier: 'electricite',
     lignes: [
-      { ref: 'ELE-003', label: 'Tableau \u00e9lectrique 2 rang\u00e9es', qty: 1, unit: 'u', priceHT: 420, tva: 10 },
+      { ref: 'ELE-003', label: 'Tableau électrique 2 rangées', qty: 1, unit: 'u', priceHT: 420, tva: 10 },
       { ref: 'ELE-004', label: 'Mise aux normes NF C15-100', qty: 1, unit: 'forfait', priceHT: 1450, tva: 10 },
       { ref: 'ELE-002', label: 'Point lumineux complet', qty: 6, unit: 'u', priceHT: 85, tva: 10 },
     ],
   },
   {
     id: 'tpl-peinture',
-    name: 'Peinture - Pi\u00e8ce compl\u00e8te',
+    name: 'Peinture - Pièce complète',
     metier: 'peinture',
     lignes: [
-      { ref: 'PEI-003', label: 'Pr\u00e9paration support (enduit)', qty: 50, unit: 'm\u00b2', priceHT: 14, tva: 10 },
-      { ref: 'PEI-001', label: 'Peinture mur int\u00e9rieur (au m\u00b2)', qty: 50, unit: 'm\u00b2', priceHT: 22, tva: 10 },
-      { ref: 'PEI-002', label: 'Peinture plafond (au m\u00b2)', qty: 20, unit: 'm\u00b2', priceHT: 26, tva: 10 },
+      { ref: 'PEI-003', label: 'Préparation support (enduit)', qty: 50, unit: 'm²', priceHT: 14, tva: 10 },
+      { ref: 'PEI-001', label: 'Peinture mur intérieur (au m²)', qty: 50, unit: 'm²', priceHT: 22, tva: 10 },
+      { ref: 'PEI-002', label: 'Peinture plafond (au m²)', qty: 20, unit: 'm²', priceHT: 26, tva: 10 },
     ],
   },
 ]
 
 export function DataProvider({ children }) {
-  const [user, setUser] = useState(() => loadFromStorage(STORAGE_KEYS.user, null))
-  const [devis, setDevis] = useState(() => loadFromStorage(STORAGE_KEYS.devis, []))
-  const [factures, setFactures] = useState(() => loadFromStorage(STORAGE_KEYS.factures, []))
-  const [profile, setProfile] = useState(() => loadFromStorage(STORAGE_KEYS.profile, null))
-  const [plan, setPlan] = useState(() => loadFromStorage(STORAGE_KEYS.plan, 'free'))
-  const [clients, setClients] = useState(() => loadFromStorage(STORAGE_KEYS.clients, []))
-  const [templates, setTemplates] = useState(() => loadFromStorage(STORAGE_KEYS.templates, DEFAULT_TEMPLATES))
-  const [activity, setActivity] = useState(() => loadFromStorage(STORAGE_KEYS.activity, []))
-  const [customObjectives, setCustomObjectives] = useState(() => loadFromStorage(STORAGE_KEYS.customObjectives, []))
+  // === ÉTAT INITIAL : TOUT VIDE ===
+  // On charge RIEN tant qu'on a pas l'user connecté
+  const [user, setUser] = useState(null)
+  const [devis, setDevis] = useState([])
+  const [factures, setFactures] = useState([])
+  const [profile, setProfile] = useState(null)
+  const [plan, setPlan] = useState('free')
+  const [clients, setClients] = useState([])
+  const [templates, setTemplates] = useState(DEFAULT_TEMPLATES)
+  const [activity, setActivity] = useState([])
+  const [customObjectives, setCustomObjectives] = useState([])
   const [loading, setLoading] = useState(true)
+  const [userId, setUserId] = useState(null) // ID stable pour le cache
 
+  // === CHARGEMENT INITIAL : uniquement après login ===
   useEffect(() => {
     let mounted = true
 
@@ -99,34 +115,46 @@ export function DataProvider({ children }) {
         if (!mounted) return
 
         if (currentUser) {
+          const uid = currentUser.id
           setUser(currentUser)
-          saveToStorage(STORAGE_KEYS.user, currentUser)
+          setUserId(uid)
+          // Charger depuis le localStorage de CET user
+          setDevis(loadFromStorage('devis', uid, []))
+          setFactures(loadFromStorage('factures', uid, []))
+          setProfile(loadFromStorage('profile', uid, null))
+          setPlan(loadFromStorage('plan', uid, 'free'))
+          setClients(loadFromStorage('clients', uid, []))
+          setTemplates(loadFromStorage('templates', uid, DEFAULT_TEMPLATES))
+          setActivity(loadFromStorage('activity', uid, []))
+          setCustomObjectives(loadFromStorage('customObjectives', uid, []))
+
+          // Tenter de sync avec Supabase
           try {
             const [userDevis, userFactures, userProfile] = await Promise.all([
-              fetchDevis(currentUser.id),
-              fetchFactures(currentUser.id),
-              apiGetProfile(currentUser.id),
+              fetchDevis(uid),
+              fetchFactures(uid),
+              apiGetProfile(uid),
             ])
             if (mounted) {
               if (userDevis?.length > 0) {
                 setDevis(userDevis)
-                saveToStorage(STORAGE_KEYS.devis, userDevis)
+                saveToStorage('devis', uid, userDevis)
               }
               if (userFactures?.length > 0) {
                 setFactures(userFactures)
-                saveToStorage(STORAGE_KEYS.factures, userFactures)
+                saveToStorage('factures', uid, userFactures)
               }
               if (userProfile) {
                 setProfile(userProfile)
-                saveToStorage(STORAGE_KEYS.profile, userProfile)
+                saveToStorage('profile', uid, userProfile)
               }
             }
           } catch (err) {
-            console.warn('Supabase offline mode:', err.message)
+            console.warn('Supabase offline:', err.message)
           }
         }
       } catch (err) {
-        console.warn('Init:', err)
+        console.warn('Init error:', err)
       } finally {
         if (mounted) setLoading(false)
       }
@@ -134,11 +162,35 @@ export function DataProvider({ children }) {
 
     init()
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (mounted) {
-        setUser(session?.user || null)
-        if (session?.user) saveToStorage(STORAGE_KEYS.user, session.user)
-        else localStorage.removeItem(STORAGE_KEYS.user)
+    // === LISTENER AUTH : reset complet au login/logout ===
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!mounted) return
+
+      if (event === 'SIGNED_IN' && session?.user) {
+        const uid = session.user.id
+        setUser(session.user)
+        setUserId(uid)
+        // Charger les données du NOUVEAU user
+        setDevis(loadFromStorage('devis', uid, []))
+        setFactures(loadFromStorage('factures', uid, []))
+        setProfile(loadFromStorage('profile', uid, null))
+        setPlan(loadFromStorage('plan', uid, 'free'))
+        setClients(loadFromStorage('clients', uid, []))
+        setTemplates(loadFromStorage('templates', uid, DEFAULT_TEMPLATES))
+        setActivity(loadFromStorage('activity', uid, []))
+        setCustomObjectives(loadFromStorage('customObjectives', uid, []))
+      } else if (event === 'SIGNED_OUT') {
+        // RESET TOTAL au logout
+        setUser(null)
+        setUserId(null)
+        setDevis([])
+        setFactures([])
+        setProfile(null)
+        setPlan('free')
+        setClients([])
+        setTemplates(DEFAULT_TEMPLATES)
+        setActivity([])
+        setCustomObjectives([])
       }
     })
 
@@ -148,14 +200,15 @@ export function DataProvider({ children }) {
     }
   }, [])
 
-  useEffect(() => { saveToStorage(STORAGE_KEYS.devis, devis) }, [devis])
-  useEffect(() => { saveToStorage(STORAGE_KEYS.factures, factures) }, [factures])
-  useEffect(() => { saveToStorage(STORAGE_KEYS.profile, profile) }, [profile])
-  useEffect(() => { saveToStorage(STORAGE_KEYS.plan, plan) }, [plan])
-  useEffect(() => { saveToStorage(STORAGE_KEYS.clients, clients) }, [clients])
-  useEffect(() => { saveToStorage(STORAGE_KEYS.templates, templates) }, [templates])
-  useEffect(() => { saveToStorage(STORAGE_KEYS.activity, activity.slice(0, 50)) }, [activity])
-  useEffect(() => { saveToStorage(STORAGE_KEYS.customObjectives, customObjectives) }, [customObjectives])
+  // === PERSISTANCE AUTOMATIQUE (uniquement si user connecté) ===
+  useEffect(() => { if (userId) saveToStorage('devis', userId, devis) }, [devis, userId])
+  useEffect(() => { if (userId) saveToStorage('factures', userId, factures) }, [factures, userId])
+  useEffect(() => { if (userId) saveToStorage('profile', userId, profile) }, [profile, userId])
+  useEffect(() => { if (userId) saveToStorage('plan', userId, plan) }, [plan, userId])
+  useEffect(() => { if (userId) saveToStorage('clients', userId, clients) }, [clients, userId])
+  useEffect(() => { if (userId) saveToStorage('templates', userId, templates) }, [templates, userId])
+  useEffect(() => { if (userId) saveToStorage('activity', userId, activity.slice(0, 50)) }, [activity, userId])
+  useEffect(() => { if (userId) saveToStorage('customObjectives', userId, customObjectives) }, [customObjectives, userId])
 
   // === ACTIVITY LOG ===
   function logActivity(type, label, metadata = {}) {
@@ -181,14 +234,8 @@ export function DataProvider({ children }) {
       ...newDevis,
     }
     setDevis(prev => [fullDevis, ...prev])
-
-    // Auto-cr\u00e9e le client s'il n'existe pas
-    if (fullDevis.client_nom) {
-      upsertClientFromDevis(fullDevis)
-    }
-
-    logActivity('devis_created', `Devis ${numero} cr\u00e9\u00e9 pour ${fullDevis.client_nom}`)
-
+    if (fullDevis.client_nom) upsertClientFromDevis(fullDevis)
+    logActivity('devis_created', `Devis ${numero} créé pour ${fullDevis.client_nom}`)
     if (user) {
       try { await apiCreateDevis(fullDevis) } catch (e) { console.warn('Sync BDD:', e) }
     }
@@ -199,7 +246,7 @@ export function DataProvider({ children }) {
     setDevis(prev => prev.map(d => d.id === id ? { ...d, ...updates } : d))
     if (updates.statut) {
       const d = devis.find(x => x.id === id)
-      if (d) logActivity('devis_status', `Devis ${d.numero} -> ${updates.statut}`)
+      if (d) logActivity('devis_status', `Devis ${d.numero} → ${updates.statut}`)
     }
     if (user) {
       try { await apiUpdateDevis(id, updates) } catch (e) { console.warn('Sync BDD:', e) }
@@ -209,7 +256,7 @@ export function DataProvider({ children }) {
   async function deleteDevis(id) {
     const d = devis.find(x => x.id === id)
     setDevis(prev => prev.filter(x => x.id !== id))
-    if (d) logActivity('devis_deleted', `Devis ${d.numero} supprim\u00e9`)
+    if (d) logActivity('devis_deleted', `Devis ${d.numero} supprimé`)
     if (user) {
       try { await apiDeleteDevis(id) } catch (e) { console.warn('Sync BDD:', e) }
     }
@@ -220,17 +267,16 @@ export function DataProvider({ children }) {
     const id = newFacture.id || crypto.randomUUID()
     const numero = newFacture.numero || `FAC-${new Date().getFullYear()}-${String(factures.length + 1).padStart(3, '0')}`
     const fullFacture = {
-      id,
-      numero,
+      id, numero,
       statut: 'en_attente',
       date_emission: new Date().toISOString().slice(0, 10),
       date_echeance: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
       ...newFacture,
     }
     setFactures(prev => [fullFacture, ...prev])
-    logActivity('facture_created', `Facture ${numero} cr\u00e9\u00e9e pour ${fullFacture.client_nom}`)
+    logActivity('facture_created', `Facture ${numero} créée pour ${fullFacture.client_nom}`)
     if (user) {
-      try { await apiCreateFacture(fullFacture) } catch (e) { console.warn('Sync BDD:', e) }
+      try { await apiCreateFacture(fullFacture) } catch (e) { console.warn('Sync BBD:', e) }
     }
     return fullFacture
   }
@@ -243,31 +289,29 @@ export function DataProvider({ children }) {
   }
 
   // === CLIENTS ===
-  function upsertClientFromDevis(devis) {
-    if (!devis.client_nom) return
+  function upsertClientFromDevis(d) {
+    if (!d.client_nom) return
     setClients(prev => {
       const existing = prev.find(c =>
-        c.nom?.toLowerCase() === devis.client_nom?.toLowerCase() ||
-        (devis.client_email && c.email === devis.client_email)
+        c.nom?.toLowerCase() === d.client_nom?.toLowerCase() ||
+        (d.client_email && c.email === d.client_email)
       )
       if (existing) {
-        // Met \u00e0 jour
         return prev.map(c => c.id === existing.id ? {
           ...c,
-          email: devis.client_email || c.email,
-          telephone: devis.client_tel || c.telephone,
-          adresse: devis.client_adresse || c.adresse,
+          email: d.client_email || c.email,
+          telephone: d.client_tel || c.telephone,
+          adresse: d.client_adresse || c.adresse,
           derniere_interaction: new Date().toISOString(),
           total_devis: (c.total_devis || 0) + 1,
         } : c)
       } else {
-        // Cr\u00e9e
         return [{
           id: crypto.randomUUID(),
-          nom: devis.client_nom,
-          email: devis.client_email || '',
-          telephone: devis.client_tel || '',
-          adresse: devis.client_adresse || '',
+          nom: d.client_nom,
+          email: d.client_email || '',
+          telephone: d.client_tel || '',
+          adresse: d.client_adresse || '',
           created_at: new Date().toISOString(),
           derniere_interaction: new Date().toISOString(),
           total_devis: 1,
@@ -277,39 +321,20 @@ export function DataProvider({ children }) {
   }
 
   function addClient(client) {
-    const newClient = {
-      id: crypto.randomUUID(),
-      created_at: new Date().toISOString(),
-      total_devis: 0,
-      ...client,
-    }
+    const newClient = { id: crypto.randomUUID(), created_at: new Date().toISOString(), total_devis: 0, ...client }
     setClients(prev => [newClient, ...prev])
-    logActivity('client_created', `Client ${client.nom} ajout\u00e9`)
+    logActivity('client_created', `Client ${client.nom} ajouté`)
     return newClient
   }
 
-  function updateClient(id, updates) {
-    setClients(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c))
-  }
+  function updateClient(id, updates) { setClients(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c)) }
+  function deleteClient(id) { setClients(prev => prev.filter(c => c.id !== id)) }
 
-  function deleteClient(id) {
-    setClients(prev => prev.filter(c => c.id !== id))
-  }
-
-  // === TEMPLATES ===
   function addTemplate(template) {
-    const newTpl = {
-      id: crypto.randomUUID(),
-      ...template,
-    }
-    setTemplates(prev => [newTpl, ...prev])
+    setTemplates(prev => [{ id: crypto.randomUUID(), ...template }, ...prev])
   }
+  function deleteTemplate(id) { setTemplates(prev => prev.filter(t => t.id !== id)) }
 
-  function deleteTemplate(id) {
-    setTemplates(prev => prev.filter(t => t.id !== id))
-  }
-
-  // === PROFIL ===
   async function saveProfile(newProfile) {
     setProfile(newProfile)
     if (user) {
@@ -321,43 +346,44 @@ export function DataProvider({ children }) {
     return profile || { ...DEFAULT_PROFILE, email: user?.email || '' }
   }
 
-  // === AUTH ===
+  // === AUTH : Logout sécurisé ===
   async function signOut() {
+    if (!confirm('Te déconnecter ? Tes données resteront sauvegardées sur cet appareil.')) return
     try { await supabase.auth.signOut() } catch (e) {}
+    // Reset complet du state (déjà fait par le listener, mais on double)
     setUser(null)
-    // On garde les devis/factures en local
+    setUserId(null)
+    setDevis([])
+    setFactures([])
+    setProfile(null)
     setPlan('free')
-    localStorage.removeItem(STORAGE_KEYS.user)
-    localStorage.removeItem(STORAGE_KEYS.plan)
+    setClients([])
+    setActivity([])
+    setCustomObjectives([])
   }
 
-  function upgradePlan(newPlan) {
-    setPlan(newPlan)
-    logActivity('plan_upgraded', `Plan mis \u00e0 jour : ${newPlan}`)
-  }
-
+  // === RESET COMPLET (RGPD) ===
   function clearAllData() {
+    if (!confirm('⚠️ ATTENTION : Supprimer TOUTES tes données ? Cette action est irréversible.')) return
+    if (userId) {
+      clearAllUserData(userId)
+    }
     setDevis([])
     setFactures([])
     setClients([])
     setActivity([])
-    localStorage.removeItem(STORAGE_KEYS.devis)
-    localStorage.removeItem(STORAGE_KEYS.factures)
-    localStorage.removeItem(STORAGE_KEYS.clients)
-    localStorage.removeItem(STORAGE_KEYS.activity)
   }
 
-  // === OBJECTIFS PERSONNALISÉS ===
-  function addCustomObjective(obj) {
-    setCustomObjectives(prev => [...prev, obj])
+  function upgradePlan(newPlan) {
+    setPlan(newPlan)
+    logActivity('plan_upgraded', `Plan mis à jour : ${newPlan}`)
   }
 
-  function removeCustomObjective(id) {
-    setCustomObjectives(prev => prev.filter(o => o.id !== id))
-  }
+  function addCustomObjective(obj) { setCustomObjectives(prev => [...prev, obj]) }
+  function removeCustomObjective(id) { setCustomObjectives(prev => prev.filter(o => o.id !== id)) }
 
   const value = {
-    user, loading,
+    user, loading, userId,
     devis, factures, profile, plan,
     clients, templates, activity, customObjectives,
     addDevis, updateDevis, deleteDevis,

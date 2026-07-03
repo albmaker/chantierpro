@@ -1,61 +1,72 @@
-import { useState, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Mic, MicOff, Sparkles, Save, Loader, AlertCircle, CheckCircle2, Wand2 } from 'lucide-react'
 import Header from '../components/Header'
 import { OUVRAGES_BTP } from '../data/empty'
-import { recognizeSpeech, structureTranscription, structureLocally } from '../lib/voiceService'
+import { createSpeechRecognizer, isSpeechRecognitionSupported, structureTranscription, structureLocally } from '../lib/voiceService'
 import { useData } from '../contexts/DataContext'
 
 export default function VoiceInput() {
   const navigate = useNavigate()
-  const { addDevis, getProfile } = useData()
+  const { addDevis } = useData()
   const [isRecording, setIsRecording] = useState(false)
   const [transcript, setTranscript] = useState('')
-  const [interim, setInterim] = useState('')
+  [interim, setInterim] = useState('') // ignore
   const [structuring, setStructuring] = useState(false)
   const [structured, setStructured] = useState(null)
   const [error, setError] = useState(null)
   const [clientNom, setClientNom] = useState('')
-  const recognitionRef = useRef(null)
-  const intervalRef = useRef(null)
+  const [recognizer, setRecognizer] = useState(null)
+  const [supported, setSupported] = useState(true)
+
+  // V\u00e9rifier le support au mount
+  useEffect(() => {
+    setSupported(isSpeechRecognitionSupported())
+    return () => {
+      if (recognizer) {
+        try { recognizer.abort() } catch (e) {}
+      }
+    }
+  }, [])
 
   async function startRecording() {
     setError(null)
     setTranscript('')
-    setInterim('')
     setStructured(null)
 
-    try {
-      const result = await recognizeSpeech()
-      recognitionRef.current = result
-
-      // Polling pour récupérer interim + final
-      intervalRef.current = setInterval(() => {
-        if (recognitionRef.current) {
-          // Note: Web Speech API ne donne pas accès direct au transcript courant
-          // On va devoir arrêter périodiquement et redémarrer
-        }
-      }, 1000)
-
-      setIsRecording(true)
-    } catch (err) {
-      setError(err.message)
+    if (!isSpeechRecognitionSupported()) {
+      setError('Reconnaissance vocale non supportée. Utilisez Chrome, Edge ou Safari récent. Vous pouvez aussi taper le texte manuellement ci-dessous.')
+      return
     }
+
+    const rec = createSpeechRecognizer({
+      onResult: (text, isFinal) => {
+        setTranscript(text)
+      },
+      onError: (err) => {
+        setError(`Erreur micro : ${err}. Astuce : autorise l'accès au micro dans les paramètres du navigateur.`)
+        setIsRecording(false)
+      },
+      onEnd: () => {
+        setIsRecording(false)
+      },
+    })
+
+    if (!rec) {
+      setError('Impossible de créer le recognizer. Utilise Chrome ou Edge.')
+      return
+    }
+
+    setRecognizer(rec)
+    rec.start()
+    setIsRecording(true)
   }
 
   function stopRecording() {
+    if (recognizer) {
+      recognizer.stop()
+    }
     setIsRecording(false)
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current)
-      intervalRef.current = null
-    }
-    if (recognitionRef.current) {
-      try { recognitionRef.current.stop() } catch (e) {}
-    }
-  }
-
-  function handleEditTranscript(e) {
-    setTranscript(e.target.value)
   }
 
   async function handleStructure() {
@@ -70,18 +81,13 @@ export default function VoiceInput() {
       setStructured(result)
     } catch (err) {
       console.warn('Mistral failed, using local fallback:', err.message)
-      // Fallback local si Mistral ne répond pas
       try {
         const result = structureLocally(transcript)
         setStructured(result)
-        setError('Mistral AI non disponible, structuration locale utilisée. Tu peux éditer les lignes ci-dessous.')
+        setError('Mistral AI non disponible, structuration locale utilisée. Édite les lignes si besoin.')
       } catch (err2) {
         setError('Erreur : ' + err.message)
-        setStructured({
-          metier: 'plomberie',
-          description: 'Devis à compléter manuellement',
-          ouvrages: [],
-        })
+        setStructured({ metier: 'plomberie', description: 'Devis vide', ouvrages: [] })
       }
     } finally {
       setStructuring(false)
@@ -97,7 +103,6 @@ export default function VoiceInput() {
       setError('Aucun ouvrage à enregistrer')
       return
     }
-
     try {
       const newDevis = await addDevis({
         client_nom: clientNom,
@@ -113,7 +118,7 @@ export default function VoiceInput() {
         })),
         statut: 'en_attente',
       })
-      alert('Devis créé avec succès !')
+      alert('Devis créé !')
       navigate(`/devis/${newDevis.id}`)
     } catch (err) {
       setError('Erreur : ' + err.message)
@@ -137,63 +142,38 @@ export default function VoiceInput() {
 
   return (
     <div className="pb-24">
-      <Header
-        title="🎙️ Saisie vocale"
-        subtitle="Dicte ton devis, l'IA le structure"
-      />
+      <Header title="🎙️ Saisie vocale" subtitle="Dicte ton devis, l'IA le structure" />
 
       <div className="px-5 pt-4 space-y-4">
-        {/* Instructions */}
-        <div className="card bg-gradient-to-br from-blue-50 to-white dark:from-slate-800 dark:to-slate-800 border-blue-200">
+        {/* Info sur le navigateur requis */}
+        <div className="card bg-gradient-to-br from-blue-50 to-white border-blue-200">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
               <Mic className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <h3 className="font-bold text-slate-900 dark:text-white text-sm">Comment ça marche</h3>
-              <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
-                1. Clique sur le micro et dicte ton chantier<br/>
-                2. L'IA transcrit et structure en lignes<br/>
-                3. Tu valides et c'est enregistré
+              <h3 className="font-bold text-slate-900 text-sm">Comment ça marche</h3>
+              <p className="text-xs text-slate-600 mt-1">
+                1. Autorise l'accès au micro dans ton navigateur<br/>
+                2. Clique sur le micro et dicte ton chantier<br/>
+                3. L'IA Mistral structure en lignes de devis<br/>
+                4. Tu valides et c'est enregistré
               </p>
             </div>
           </div>
         </div>
 
-        {/* Bouton micro */}
-        {!structured && (
-          <div className="card text-center py-8">
-            {isRecording ? (
-              <div className="space-y-4">
-                <div className="relative w-24 h-24 mx-auto">
-                  <div className="absolute inset-0 bg-red-500 rounded-full animate-ping opacity-75" />
-                  <div className="relative w-24 h-24 bg-red-500 rounded-full flex items-center justify-center">
-                    <Mic className="w-12 h-12 text-white" />
-                  </div>
-                </div>
-                <p className="text-lg font-bold text-red-600">J'écoute...</p>
-                <p className="text-sm text-slate-500">Décris ton chantier naturellement</p>
-                {interim && (
-                  <p className="text-sm text-slate-400 italic mt-2">"{interim}"</p>
-                )}
-                <button onClick={stopRecording} className="btn-secondary">
-                  <MicOff className="w-4 h-4 inline mr-2" />
-                  Arrêter
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="w-24 h-24 mx-auto bg-chantier rounded-full flex items-center justify-center shadow-elevated active:scale-95 transition-transform">
-                  <button onClick={startRecording} className="w-full h-full rounded-full flex items-center justify-center">
-                    <Mic className="w-12 h-12 text-white" />
-                  </button>
-                </div>
-                <p className="text-lg font-bold text-slate-900 dark:text-white">Appuie pour dicter</p>
-                <p className="text-sm text-slate-500 px-4">
-                  Exemple : "C'est une salle de bain, 6m², faut refaire la plomberie, changer la baignoire en douche, et repeindre le plafond"
+        {!supported && (
+          <div className="card border-amber-200 bg-amber-50">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5" />
+              <div>
+                <p className="text-sm font-bold text-amber-900">Navigateur non compatible</p>
+                <p className="text-xs text-amber-700 mt-1">
+                  Le micro nécessite Chrome, Edge ou Safari. Tu peux quand même taper ta dictée dans la zone de texte.
                 </p>
               </div>
-            )}
+            </div>
           </div>
         )}
 
@@ -206,94 +186,121 @@ export default function VoiceInput() {
           </div>
         )}
 
-        {/* Transcript éditable */}
-        {transcript && !structured && (
-          <div className="card">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-2">Transcription</h3>
-            <textarea
-              className="input min-h-[120px] text-sm"
-              value={transcript}
-              onChange={handleEditTranscript}
-              placeholder="Ta dictée apparaîtra ici. Tu peux l'éditer si besoin."
-            />
-            <button
-              onClick={handleStructure}
-              disabled={structuring}
-              className="btn-primary w-full mt-3"
-            >
-              {structuring ? (
-                <>
-                  <Loader className="w-4 h-4 inline mr-2 animate-spin" />
-                  L'IA structure ton devis...
-                </>
+        {/* Bouton micro + zone de texte */}
+        {!structured && (
+          <>
+            <div className="card text-center py-6">
+              {isRecording ? (
+                <div className="space-y-3">
+                  <div className="relative w-20 h-20 mx-auto">
+                    <div className="absolute inset-0 bg-red-500 rounded-full animate-ping opacity-75" />
+                    <div className="relative w-20 h-20 bg-red-500 rounded-full flex items-center justify-center">
+                      <Mic className="w-10 h-10 text-white" />
+                    </div>
+                  </div>
+                  <p className="text-base font-bold text-red-600">J'écoute... parle maintenant</p>
+                  <button onClick={stopRecording} className="btn-secondary">
+                    <MicOff className="w-4 h-4 inline mr-2" /> Arrêter
+                  </button>
+                </div>
               ) : (
-                <>
-                  <Wand2 className="w-4 h-4 inline mr-2" />
-                  Structurer en lignes de devis
-                </>
+                <div className="space-y-3">
+                  <button
+                    onClick={startRecording}
+                    className="w-20 h-20 mx-auto bg-chantier rounded-full flex items-center justify-center shadow-elevated active:scale-95 transition-transform"
+                  >
+                    <Mic className="w-10 h-10 text-white" />
+                  </button>
+                  <p className="text-base font-bold text-slate-900">Appuie pour dicter</p>
+                  <p className="text-xs text-slate-500 px-4">
+                    Exemple : "C'est une salle de bain, 6m², faut refaire la plomberie et poser une douche italienne"
+                  </p>
+                </div>
               )}
-            </button>
-          </div>
+            </div>
+
+            {/* Zone de texte éditable (toujours dispo en fallback) */}
+            <div className="card">
+              <label className="label">Ou tape ta dictée ici</label>
+              <textarea
+                className="input min-h-[100px] text-sm"
+                value={transcript}
+                onChange={e => setTranscript(e.target.value)}
+                placeholder="Décris ton chantier ici, ou utilise le micro..."
+              />
+              <button
+                onClick={handleStructure}
+                disabled={structuring || !transcript.trim()}
+                className="btn-primary w-full mt-3"
+              >
+                {structuring ? (
+                  <>
+                    <Loader className="w-4 h-4 inline mr-2 animate-spin" />
+                    L'IA Mistral structure ton devis...
+                  </>
+                ) : (
+                  <>
+                    <Wand2 className="w-4 h-4 inline mr-2" />
+                    Structurer en lignes de devis
+                  </>
+                )}
+              </button>
+            </div>
+          </>
         )}
 
         {/* Résultat structuré */}
         {structured && (
           <>
-            <div className="card bg-gradient-to-br from-emerald-50 to-white dark:from-slate-800 dark:to-slate-800 border-emerald-200">
+            <div className="card bg-gradient-to-br from-emerald-50 to-white border-emerald-200">
               <div className="flex items-start gap-2">
                 <CheckCircle2 className="w-5 h-5 text-emerald-500 mt-0.5" />
                 <div>
-                  <p className="text-sm font-bold text-slate-900 dark:text-white">Devis structuré !</p>
-                  <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
-                    {structured.description}
-                  </p>
+                  <p className="text-sm font-bold text-slate-900">Devis structuré !</p>
+                  <p className="text-xs text-slate-600 mt-1">{structured.description}</p>
                 </div>
               </div>
             </div>
 
-            <div className="space-y-2">
-              {structured.ouvrages.map((l, i) => (
-                <div key={i} className="card space-y-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-slate-900 dark:text-white text-sm">{l.label}</p>
-                      <p className="text-[10px] text-slate-500 mt-0.5">
-                        {l.matched ? `✓ ${l.ref}` : 'Personnalisé'} · TVA {l.tva}%
-                      </p>
+            {structured.ouvrages.length === 0 ? (
+              <div className="card text-center py-4">
+                <p className="text-slate-500 text-sm">Aucun ouvrage détecté. Essaie d'être plus précis dans ta dictée.</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {structured.ouvrages.map((l, i) => (
+                  <div key={i} className="card space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-slate-900 text-sm">{l.label}</p>
+                        <p className="text-[10px] text-slate-500 mt-0.5">
+                          {l.matched ? `✓ ${l.ref}` : 'Personnalisé'} · TVA {l.tva}%
+                        </p>
+                      </div>
+                      <button onClick={() => removeLigne(i)} className="w-8 h-8 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 flex items-center justify-center">
+                        <span className="text-lg leading-none">×</span>
+                      </button>
                     </div>
-                    <button onClick={() => removeLigne(i)} className="w-8 h-8 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 flex items-center justify-center">
-                      ×
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div>
-                      <label className="text-[10px] text-slate-500">Qté</label>
-                      <input
-                        type="number"
-                        className="input text-sm"
-                        value={l.qty}
-                        onChange={e => updateLigne(i, 'qty', parseFloat(e.target.value) || 0)}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] text-slate-500">Prix HT</label>
-                      <input
-                        type="number"
-                        className="input text-sm"
-                        value={l.priceHT}
-                        onChange={e => updateLigne(i, 'priceHT', parseFloat(e.target.value) || 0)}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] text-slate-500">Total TTC</label>
-                      <div className="input text-sm bg-slate-50 dark:bg-slate-700 font-bold text-chantier">
-                        {((l.qty || 0) * (l.priceHT || 0) * (1 + (l.tva || 0) / 100)).toFixed(0)}€
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="text-[10px] text-slate-500">Qté</label>
+                        <input type="number" className="input text-sm" value={l.qty} onChange={e => updateLigne(i, 'qty', parseFloat(e.target.value) || 0)} />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-500">Prix HT</label>
+                        <input type="number" className="input text-sm" value={l.priceHT} onChange={e => updateLigne(i, 'priceHT', parseFloat(e.target.value) || 0)} />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-slate-500">Total TTC</label>
+                        <div className="input text-sm bg-slate-50 font-bold text-chantier">
+                          {((l.qty || 0) * (l.priceHT || 0) * (1 + (l.tva || 0) / 100)).toFixed(0)}€
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
 
             <div>
               <label className="label">Nom du client *</label>

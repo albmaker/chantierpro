@@ -171,6 +171,24 @@ export function generatePDF(doc, profile, type = 'devis') {
       pdf.text(splitCgv, 15, finalY + 37)
     }
 
+    // === SIGNATURE (si présente dans le profil) ===
+    if (profil.signature && typeof profil.signature === 'string' && profil.signature.startsWith('data:image')) {
+      try {
+        const sigY = finalY + 60
+        const pageHeight = pdf.internal.pageSize.height
+        if (sigY < pageHeight - 25) {
+          pdf.setTextColor(0, 0, 0)
+          pdf.setFont('helvetica', 'normal')
+          pdf.setFontSize(8)
+          pdf.text('Signature :', 15, sigY)
+          // Image PNG, largeur 60mm, hauteur 20mm
+          pdf.addImage(profil.signature, 'PNG', 15, sigY + 2, 60, 20)
+        }
+      } catch (imgErr) {
+        console.warn('Signature image non chargee:', imgErr)
+      }
+    }
+
     // === FOOTER ===
     const pageHeight = pdf.internal.pageSize.height
     pdf.setFillColor(...navy)
