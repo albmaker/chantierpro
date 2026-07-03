@@ -125,7 +125,7 @@ export async function structureTranscription(transcript, ouvragesBiblio) {
     ).join('\n')}`
   }).join('\n\n')
 
-  const apiKey = import.meta.env.VITE_MISTRAL_API_KEY || 'sGKPeIjyzqtDZwgim8qfdtAvfIFptFxA'
+  const apiKey = import.meta.env.VITE_MISTRAL_API_KEY || 'HrR4xJOLz3ub7W62tw7nytM7PLXkGZ14'
 
   const response = await fetch(MISTRAL_API_URL, {
     method: 'POST',

@@ -11,7 +11,6 @@ export default function VoiceInput() {
   const { addDevis } = useData()
   const [isRecording, setIsRecording] = useState(false)
   const [transcript, setTranscript] = useState('')
-  [interim, setInterim] = useState('') // ignore
   const [structuring, setStructuring] = useState(false)
   const [structured, setStructured] = useState(null)
   const [error, setError] = useState(null)
