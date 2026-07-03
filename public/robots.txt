@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /dashboard
+Disallow: /devis
+Disallow: /factures
+Disallow: /parametres
+
+Sitemap: https://chantierpro.fr/sitemap.xml
