@@ -12,6 +12,9 @@ import Auth from './pages/Auth'
 import Pricing from './pages/Pricing'
 import Clients from './pages/Clients'
 import Stats from './pages/Stats'
+import Messages from './pages/Messages'
+import Signature from './pages/Signature'
+import Objectifs from './pages/Objectifs'
 import { BlogList, BlogPost } from './pages/Blog'
 import { DataProvider, useData } from './contexts/DataContext'
 
@@ -50,6 +53,9 @@ function AppContent() {
         <Route path="/clients" element={<Clients />} />
         <Route path="/stats" element={<Stats />} />
         <Route path="/parametres" element={<Parametres />} />
+        <Route path="/signature" element={<Signature />} />
+        <Route path="/messages" element={<Messages />} />
+        <Route path="/objectifs" element={<Objectifs />} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

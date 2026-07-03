@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, FileText, TrendingUp, AlertCircle, Briefcase, Euro, Sparkles, ArrowRight, Users } from 'lucide-react'
+import { Plus, FileText, TrendingUp, AlertCircle, Briefcase, Euro, Sparkles, ArrowRight, Users, MessageSquare, Target, PenLine, TrendingDown } from 'lucide-react'
 import Header from '../components/Header'
 import StatCard from '../components/StatCard'
 import EmptyState from '../components/EmptyState'
@@ -11,12 +11,9 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const { devis, factures, profile, clients } = useData()
 
-  // Stats calculées
   const facturesEnAttente = factures.filter(f => f.statut === 'en_attente' || f.statut === 'en_retard')
   const facturesEnRetard = factures.filter(f => f.statut === 'en_retard')
-  const caPaye = factures
-    .filter(f => f.statut === 'payee')
-    .reduce((s, f) => s + computeTotals(f.lignes).totalTTC, 0)
+  const caPaye = factures.filter(f => f.statut === 'payee').reduce((s, f) => s + computeTotals(f.lignes).totalTTC, 0)
   const caEnAttente = facturesEnAttente.reduce((s, f) => s + computeTotals(f.lignes).totalTTC, 0)
   const devisEnAttente = devis.filter(d => d.statut === 'en_attente')
 
@@ -42,15 +39,12 @@ export default function Dashboard() {
       <div className="px-5 pt-4 space-y-4">
         {isNewUser ? (
           <>
-            {/* Onboarding pour nouvel utilisateur */}
             <div className="card bg-gradient-to-br from-chantier-50 to-white border-chantier-100">
               <div className="flex items-start gap-3 mb-3">
                 <Sparkles className="w-5 h-5 text-chantier flex-shrink-0 mt-0.5" />
                 <div>
                   <h2 className="font-bold text-slate-900">Bienvenue sur ChantierPro</h2>
-                  <p className="text-sm text-slate-600 mt-1">
-                    En 3 étapes, votre espace est prêt.
-                  </p>
+                  <p className="text-sm text-slate-600 mt-1">En 3 étapes, votre espace est prêt.</p>
                 </div>
               </div>
               <div className="space-y-2 mt-4">
@@ -85,28 +79,10 @@ export default function Dashboard() {
           </>
         ) : (
           <>
-            {/* Stats avec VRAIES données */}
             <div className="grid grid-cols-2 gap-3">
-              <StatCard
-                label="CA encaissé"
-                value={caPaye.toFixed(0)}
-                suffix="€"
-                color="text-emerald-600"
-                icon={<Euro className="w-4 h-4" />}
-              />
-              <StatCard
-                label="En attente"
-                value={caEnAttente.toFixed(0)}
-                suffix="€"
-                color={caEnAttente > 0 ? 'text-amber-600' : 'text-slate-500'}
-                icon={<TrendingUp className="w-4 h-4" />}
-              />
-              <StatCard
-                label="Devis en cours"
-                value={devisEnAttente.length}
-                color="text-slate-900"
-                icon={<FileText className="w-4 h-4" />}
-              />
+              <StatCard label="CA encaissé" value={caPaye.toFixed(0)} suffix="€" color="text-emerald-600" icon={<Euro className="w-4 h-4" />} />
+              <StatCard label="En attente" value={caEnAttente.toFixed(0)} suffix="€" color={caEnAttente > 0 ? 'text-amber-600' : 'text-slate-400'} icon={<TrendingUp className="w-4 h-4" />} />
+              <StatCard label="Devis en cours" value={devisEnAttente.length} color="text-slate-900" icon={<FileText className="w-4 h-4" />} />
               <StatCard
                 label={facturesEnRetard.length > 0 ? "En retard" : "Factures"}
                 value={facturesEnRetard.length > 0 ? facturesEnRetard.length : factures.length}
@@ -115,31 +91,53 @@ export default function Dashboard() {
               />
             </div>
 
-            {/* Actions rapides */}
+            {/* Alerte factures en retard */}
+            {facturesEnRetard.length > 0 && (
+              <button onClick={() => navigate('/factures')} className="w-full card bg-red-50 border-red-200 text-left active:scale-[0.98]">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center">
+                    <AlertCircle className="w-5 h-5 text-red-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-bold text-red-900">{facturesEnRetard.length} facture(s) en retard</p>
+                    <p className="text-xs text-red-700">À relancer rapidement</p>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-red-600" />
+                </div>
+              </button>
+            )}
+
             <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => navigate('/nouveau-devis')}
-                className="card hover:shadow-elevated active:scale-95 transition-all text-left"
-              >
+              <button onClick={() => navigate('/nouveau-devis')} className="card hover:shadow-elevated active:scale-95 transition-all text-left">
                 <div className="w-10 h-10 rounded-xl bg-chantier-50 flex items-center justify-center mb-2">
                   <FileText className="w-5 h-5 text-chantier" />
                 </div>
-                <p className="font-semibold text-slate-900 text-sm">Nouveau devis</p>
+                <p className="font-bold text-slate-900 text-sm">Nouveau devis</p>
                 <p className="text-xs text-slate-500">Créer en 2 min</p>
               </button>
-              <button
-                onClick={() => navigate('/clients')}
-                className="card hover:shadow-elevated active:scale-95 transition-all text-left"
-              >
+              <button onClick={() => navigate('/clients')} className="card hover:shadow-elevated active:scale-95 transition-all text-left">
                 <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center mb-2">
                   <Users className="w-5 h-5 text-blue-600" />
                 </div>
-                <p className="font-semibold text-slate-900 text-sm">Mes clients</p>
+                <p className="font-bold text-slate-900 text-sm">Mes clients</p>
                 <p className="text-xs text-slate-500">{clients.length} contact{clients.length > 1 ? 's' : ''}</p>
+              </button>
+              <button onClick={() => navigate('/objectifs')} className="card hover:shadow-elevated active:scale-95 transition-all text-left">
+                <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center mb-2">
+                  <Target className="w-5 h-5 text-purple-600" />
+                </div>
+                <p className="font-bold text-slate-900 text-sm">Objectifs</p>
+                <p className="text-xs text-slate-500">Suivre mes KPIs</p>
+              </button>
+              <button onClick={() => navigate('/messages')} className="card hover:shadow-elevated active:scale-95 transition-all text-left">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center mb-2">
+                  <MessageSquare className="w-5 h-5 text-emerald-600" />
+                </div>
+                <p className="font-bold text-slate-900 text-sm">Messages</p>
+                <p className="text-xs text-slate-500">Modèles prêts</p>
               </button>
             </div>
 
-            {/* Derniers devis */}
             {devis.length > 0 && (
               <div>
                 <div className="flex items-center justify-between mb-3">

@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { Home, FileText, Receipt, BarChart3, Settings, Plus } from 'lucide-react'
+import { Home, FileText, Receipt, BarChart3, Plus, MessageSquare, Users } from 'lucide-react'
 
 const navItems = [
   { to: '/dashboard', icon: Home, label: 'Accueil' },
@@ -29,7 +29,7 @@ export default function BottomNav() {
               key={item.to}
               to={item.to}
               className={({ isActive }) =>
-                `flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl transition-colors min-w-[60px] ${
+                `flex flex-col items-center gap-1 px-2 py-1.5 rounded-xl transition-colors min-w-[56px] ${
                   isActive ? 'text-chantier' : 'text-slate-500 hover:text-slate-700'
                 }`
               }

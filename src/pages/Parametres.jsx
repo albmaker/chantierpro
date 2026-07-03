@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Save, Building2, Wrench, CreditCard, FileText, LogOut, Crown, Check, User, Trash2, Plus } from 'lucide-react'
+import { Save, Building2, Wrench, CreditCard, FileText, LogOut, Crown, Check, User, PenLine, Target, MessageSquare, ChevronRight, Trash2, Plus } from 'lucide-react'
 import Header from '../components/Header'
 import { OUVRAGES_BTP } from '../data/empty'
 import { useData } from '../contexts/DataContext'
@@ -23,16 +23,15 @@ const DEFAULT_PROFILE = {
   tva: '',
   iban: '',
   banque: '',
-  cgv: '- Acompte de 30% \u00e0 la commande\n- Solde \u00e0 la livraison\n- D\u00e9lai de paiement : 30 jours',
+  cgv: '- Acompte de 30% à la commande\n- Solde à la livraison\n- Délai de paiement : 30 jours',
 }
 
 export default function Parametres() {
   const navigate = useNavigate()
-  const { profile, saveProfile, plan, signOut, user, clients, addClient, updateClient, deleteClient, templates, addTemplate, deleteTemplate } = useData()
+  const { profile, saveProfile, plan, signOut, user, clients, addClient, updateClient, deleteClient, templates, addTemplate, deleteTemplate, clearAllData } = useData()
   const [form, setForm] = useState(profile || DEFAULT_PROFILE)
   const [activeTab, setActiveTab] = useState('entreprise')
   const [saved, setSaved] = useState(false)
-  const [showTemplateModal, setShowTemplateModal] = useState(false)
 
   useEffect(() => {
     if (profile) setForm(profile)
@@ -45,27 +44,35 @@ export default function Parametres() {
   }
 
   async function handleSignOut() {
-    if (confirm('Te d\u00e9connecter ? Tes donn\u00e9es resteront sauvegard\u00e9es sur cet appareil.')) {
+    if (confirm('Te déconnecter ? Tes données resteront sauvegardées sur cet appareil.')) {
       await signOut()
       navigate('/')
     }
   }
 
+  function handleResetData() {
+    if (confirm('⚠️ ATTENTION : Supprimer TOUTES les données (devis, factures, clients) ? Cette action est irréversible.')) {
+      clearAllData()
+      alert('Toutes les données ont été supprimées.')
+      window.location.reload()
+    }
+  }
+
   const planLabel = {
-    free: 'D\u00e9couverte',
+    free: 'Découverte',
     starter: 'Starter',
     pro: 'Pro',
     business: 'Business',
-  }[plan] || 'D\u00e9couverte'
+  }[plan] || 'Découverte'
 
   return (
     <div className="pb-24">
       <Header
-        title="Param\u00e8tres"
-        subtitle={user?.email || 'Mode d\u00e9mo local'}
+        title="Paramètres"
+        subtitle={user?.email || 'Mode démo local'}
         action={saved ? (
           <div className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-bold flex items-center gap-1">
-            <Check className="w-3 h-3" /> Sauv\u00e9
+            <Check className="w-3 h-3" /> Sauvé
           </div>
         ) : (
           <button onClick={save} className="w-11 h-11 rounded-full bg-chantier flex items-center justify-center shadow-soft active:scale-95">
@@ -75,7 +82,6 @@ export default function Parametres() {
       />
 
       <div className="px-5 pt-4 space-y-4">
-        {/* Carte utilisateur + plan */}
         <div className="card bg-gradient-to-br from-slate-900 to-slate-800 text-white border-0">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-12 h-12 rounded-full bg-chantier flex items-center justify-center">
@@ -83,7 +89,7 @@ export default function Parametres() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-bold truncate">{form.company_name || 'Mon Entreprise'}</p>
-              <p className="text-xs text-slate-300 truncate">{user?.email || 'Mode d\u00e9mo local'}</p>
+              <p className="text-xs text-slate-300 truncate">{user?.email || 'Mode démo local'}</p>
             </div>
           </div>
           <div className="flex items-center justify-between pt-3 border-t border-slate-700">
@@ -95,12 +101,52 @@ export default function Parametres() {
           </div>
           {plan === 'free' && (
             <button onClick={() => navigate('/pricing')} className="btn-primary w-full mt-3">
-              Passer au Starter (19\u20ac/mois)
+              Passer au Starter (19€/mois)
             </button>
           )}
         </div>
 
-        {/* Onglets */}
+        {/* Liens rapides vers nouvelles features */}
+        <div className="space-y-2">
+          <h3 className="text-xs text-slate-500 uppercase font-bold tracking-wider px-1">Outils</h3>
+          <button onClick={() => navigate('/signature')} className="w-full card hover:shadow-elevated active:scale-[0.98] text-left">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-chantier-50 flex items-center justify-center">
+                <PenLine className="w-5 h-5 text-chantier" />
+              </div>
+              <div className="flex-1">
+                <p className="font-bold text-slate-900 text-sm">Ma signature</p>
+                <p className="text-xs text-slate-500">Personnaliser mes PDF</p>
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-400" />
+            </div>
+          </button>
+          <button onClick={() => navigate('/messages')} className="w-full card hover:shadow-elevated active:scale-[0.98] text-left">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
+                <MessageSquare className="w-5 h-5 text-emerald-600" />
+              </div>
+              <div className="flex-1">
+                <p className="font-bold text-slate-900 text-sm">Messages types</p>
+                <p className="text-xs text-slate-500">6 modèles prêts à l'emploi</p>
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-400" />
+            </div>
+          </button>
+          <button onClick={() => navigate('/objectifs')} className="w-full card hover:shadow-elevated active:scale-[0.98] text-left">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center">
+                <Target className="w-5 h-5 text-purple-600" />
+              </div>
+              <div className="flex-1">
+                <p className="font-bold text-slate-900 text-sm">Mes objectifs</p>
+                <p className="text-xs text-slate-500">Suivre mes KPIs hebdo</p>
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-400" />
+            </div>
+          </button>
+        </div>
+
         <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
           {TABS.map(t => {
             const Icon = t.icon
@@ -131,7 +177,7 @@ export default function Parametres() {
               <input className="input" value={form.siret || ''} onChange={e => setForm({...form, siret: e.target.value})} placeholder="14 chiffres" />
             </div>
             <div>
-              <label className="label">N\u00b0 TVA Intracommunautaire</label>
+              <label className="label">N° TVA Intracommunautaire</label>
               <input className="input" value={form.tva || ''} onChange={e => setForm({...form, tva: e.target.value})} placeholder="FRXX..." />
             </div>
             <div>
@@ -144,7 +190,7 @@ export default function Parametres() {
                 <input className="input" type="email" value={form.email || ''} onChange={e => setForm({...form, email: e.target.value})} />
               </div>
               <div>
-                <label className="label">T\u00e9l\u00e9phone</label>
+                <label className="label">Téléphone</label>
                 <input className="input" value={form.telephone || ''} onChange={e => setForm({...form, telephone: e.target.value})} />
               </div>
             </div>
@@ -160,11 +206,11 @@ export default function Parametres() {
 
         {activeTab === 'ouvrages' && (
           <div className="space-y-3">
-            <h3 className="text-sm font-bold text-slate-900">Biblioth\u00e8que d'ouvrages ({Object.values(OUVRAGES_BTP).flat().length})</h3>
+            <h3 className="text-sm font-bold text-slate-900">Bibliothèque d'ouvrages ({Object.values(OUVRAGES_BTP).flat().length})</h3>
             {Object.entries(OUVRAGES_BTP).map(([metier, ouvrages]) => (
               <details key={metier} className="card" open={metier === 'plomberie'}>
                 <summary className="cursor-pointer font-bold text-slate-900 capitalize flex items-center justify-between">
-                  <span>\ud83d\udd27 {metier} ({ouvrages.length})</span>
+                  <span>🔧 {metier} ({ouvrages.length})</span>
                   <span className="text-xs text-slate-500">Cliquer</span>
                 </summary>
                 <div className="mt-3 space-y-2">
@@ -174,7 +220,7 @@ export default function Parametres() {
                         <p className="text-sm font-medium text-slate-900">{o.label}</p>
                         <p className="text-xs text-slate-500">{o.ref} · TVA {o.tva}%</p>
                       </div>
-                      <p className="text-sm font-bold text-chantier">{o.priceHT}\u20ac/{o.unit}</p>
+                      <p className="text-sm font-bold text-chantier">{o.priceHT}€/{o.unit}</p>
                     </div>
                   ))}
                 </div>
@@ -185,7 +231,7 @@ export default function Parametres() {
 
         {activeTab === 'banque' && (
           <div className="card space-y-3">
-            <h3 className="text-sm font-bold text-slate-900">Coordonn\u00e9es bancaires</h3>
+            <h3 className="text-sm font-bold text-slate-900">Coordonnées bancaires</h3>
             <div>
               <label className="label">Banque</label>
               <input className="input" value={form.banque || ''} onChange={e => setForm({...form, banque: e.target.value})} />
@@ -200,21 +246,25 @@ export default function Parametres() {
 
         {activeTab === 'cgv' && (
           <div className="card space-y-3">
-            <h3 className="text-sm font-bold text-slate-900">Conditions G\u00e9n\u00e9rales de Vente</h3>
+            <h3 className="text-sm font-bold text-slate-900">Conditions Générales de Vente</h3>
             <textarea
               className="input min-h-[200px] font-mono text-xs"
               value={form.cgv || ''}
               onChange={e => setForm({...form, cgv: e.target.value})}
             />
-            <p className="text-xs text-slate-500">Ces CGV appara\u00eetront automatiquement sur tous tes PDF.</p>
+            <p className="text-xs text-slate-500">Ces CGV apparaîtront automatiquement sur tous tes PDF.</p>
             <button onClick={save} className="btn-primary w-full">Enregistrer</button>
           </div>
         )}
 
-        <div className="pt-4 border-t border-slate-200">
-          <button onClick={handleSignOut} className="w-full text-red-600 hover:text-red-700 text-sm font-medium py-3 hover:bg-red-50 rounded-xl">
+        <div className="pt-4 border-t border-slate-200 space-y-2">
+          <button onClick={handleSignOut} className="w-full text-slate-600 hover:text-slate-900 text-sm font-medium py-3 hover:bg-slate-100 rounded-xl">
             <LogOut className="w-4 h-4 inline mr-2" />
-            Se d\u00e9connecter
+            Se déconnecter
+          </button>
+          <button onClick={handleResetData} className="w-full text-red-600 hover:text-red-700 text-sm font-medium py-3 hover:bg-red-50 rounded-xl">
+            <Trash2 className="w-4 h-4 inline mr-2" />
+            Supprimer toutes mes données
           </button>
         </div>
       </div>
@@ -267,7 +317,7 @@ function ClientsTab({ clients, addClient, updateClient, deleteClient }) {
       {clients.length === 0 ? (
         <div className="card text-center py-8">
           <p className="text-slate-500 text-sm">Aucun client</p>
-          <p className="text-slate-400 text-xs mt-1">Ils seront ajout\u00e9s automatiquement \u00e0 partir de vos devis</p>
+          <p className="text-slate-400 text-xs mt-1">Ils seront ajoutés automatiquement à partir de vos devis</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -280,7 +330,7 @@ function ClientsTab({ clients, addClient, updateClient, deleteClient }) {
                 <p className="font-semibold text-slate-900 truncate">{c.nom}</p>
                 <p className="text-xs text-slate-500 truncate">{c.email || c.telephone || '—'}</p>
               </div>
-              <button onClick={() => setEditing(c)} className="text-xs text-slate-500 hover:text-slate-700 px-2">\u00c9diter</button>
+              <button onClick={() => setEditing(c)} className="text-xs text-slate-500 hover:text-slate-700 px-2">Éditer</button>
               <button onClick={() => { if (confirm('Supprimer ?')) deleteClient(c.id) }} className="text-xs text-red-500 hover:text-red-700 px-2">
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
@@ -300,7 +350,7 @@ function ClientsTab({ clients, addClient, updateClient, deleteClient }) {
             <input className="input" type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} />
           </div>
           <div>
-            <label className="label">T\u00e9l\u00e9phone</label>
+            <label className="label">Téléphone</label>
             <input className="input" value={form.telephone} onChange={e => setForm({...form, telephone: e.target.value})} />
           </div>
           <div>
@@ -309,7 +359,7 @@ function ClientsTab({ clients, addClient, updateClient, deleteClient }) {
           </div>
           <div className="flex gap-2 pt-2">
             <button onClick={() => { setShowAdd(false); setEditing(null) }} className="btn-secondary flex-1">Annuler</button>
-            <button onClick={handleSave} className="btn-primary flex-1">{editing ? 'Enregistrer' : 'Cr\u00e9er'}</button>
+            <button onClick={handleSave} className="btn-primary flex-1">{editing ? 'Enregistrer' : 'Créer'}</button>
           </div>
         </div>
       </Modal>

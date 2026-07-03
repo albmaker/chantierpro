@@ -333,6 +333,17 @@ export function DataProvider({ children }) {
     logActivity('plan_upgraded', `Plan mis \u00e0 jour : ${newPlan}`)
   }
 
+  function clearAllData() {
+    setDevis([])
+    setFactures([])
+    setClients([])
+    setActivity([])
+    localStorage.removeItem(STORAGE_KEYS.devis)
+    localStorage.removeItem(STORAGE_KEYS.factures)
+    localStorage.removeItem(STORAGE_KEYS.clients)
+    localStorage.removeItem(STORAGE_KEYS.activity)
+  }
+
   const value = {
     user, loading,
     devis, factures, profile, plan,
@@ -342,7 +353,7 @@ export function DataProvider({ children }) {
     addClient, updateClient, deleteClient,
     addTemplate, deleteTemplate,
     saveProfile, getProfile,
-    signOut, upgradePlan,
+    signOut, upgradePlan, clearAllData,
     isPro: plan === 'pro' || plan === 'business',
     isBusiness: plan === 'business',
   }
