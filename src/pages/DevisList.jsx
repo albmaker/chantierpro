@@ -26,7 +26,10 @@ export default function DevisList() {
       const matchSearch = !searchLower ||
         (d.client_nom || '').toLowerCase().includes(searchLower) ||
         (d.numero || '').toLowerCase().includes(searchLower) ||
-        (d.client_email || '').toLowerCase().includes(searchLower)
+        (d.client_email || '').toLowerCase().includes(searchLower) ||
+        (d.notes || '').toLowerCase().includes(searchLower) ||
+        (d.metier || '').toLowerCase().includes(searchLower) ||
+        (d.lignes || []).some(l => (l.label || '').toLowerCase().includes(searchLower))
       return matchFilter && matchSearch
     })
   }, [devis, filter, search])

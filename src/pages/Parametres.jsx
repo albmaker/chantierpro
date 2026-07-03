@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Save, Building2, Wrench, CreditCard, FileText, LogOut, Crown, Check, User, PenLine, Target, MessageSquare, ChevronRight, Trash2, Plus } from 'lucide-react'
+import { Save, Building2, Wrench, CreditCard, FileText, LogOut, Crown, Check, User, PenLine, Target, MessageSquare, ChevronRight, Trash2, Plus, Moon, Sun, Download } from 'lucide-react'
 import Header from '../components/Header'
 import { OUVRAGES_BTP } from '../data/empty'
 import { useData } from '../contexts/DataContext'
+import { useTheme } from '../contexts/ThemeContext'
 import Modal from '../components/Modal'
 
 const TABS = [
@@ -28,6 +29,7 @@ const DEFAULT_PROFILE = {
 
 export default function Parametres() {
   const navigate = useNavigate()
+  const { theme, toggleTheme } = useTheme()
   const { profile, saveProfile, plan, signOut, user, clients, addClient, updateClient, deleteClient, templates, addTemplate, deleteTemplate, clearAllData } = useData()
   const [form, setForm] = useState(profile || DEFAULT_PROFILE)
   const [activeTab, setActiveTab] = useState('entreprise')
@@ -106,16 +108,39 @@ export default function Parametres() {
           )}
         </div>
 
+        {/* Mode sombre */}
+        <div className="card">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
+                {theme === 'dark' ? <Moon className="w-5 h-5 text-slate-700" /> : <Sun className="w-5 h-5 text-amber-500" />}
+              </div>
+              <div>
+                <p className="font-bold text-slate-900 dark:text-white">Mode sombre</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Idéal pour le travail en extérieur</p>
+              </div>
+            </div>
+            <button
+              onClick={toggleTheme}
+              className={`relative w-14 h-8 rounded-full transition-colors ${theme === 'dark' ? 'bg-chantier' : 'bg-slate-200'}`}
+            >
+              <div className={`absolute top-1 w-6 h-6 rounded-full bg-white shadow-md transition-transform ${
+                theme === 'dark' ? 'translate-x-7' : 'translate-x-1'
+              }`} />
+            </button>
+          </div>
+        </div>
+
         {/* Liens rapides vers nouvelles features */}
         <div className="space-y-2">
-          <h3 className="text-xs text-slate-500 uppercase font-bold tracking-wider px-1">Outils</h3>
+          <h3 className="text-xs text-slate-500 dark:text-slate-400 uppercase font-bold tracking-wider px-1">Outils</h3>
           <button onClick={() => navigate('/signature')} className="w-full card hover:shadow-elevated active:scale-[0.98] text-left">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-chantier-50 flex items-center justify-center">
                 <PenLine className="w-5 h-5 text-chantier" />
               </div>
               <div className="flex-1">
-                <p className="font-bold text-slate-900 text-sm">Ma signature</p>
+                <p className="font-bold text-slate-900 dark:text-white text-sm">Ma signature</p>
                 <p className="text-xs text-slate-500">Personnaliser mes PDF</p>
               </div>
               <ChevronRight className="w-4 h-4 text-slate-400" />
@@ -127,7 +152,7 @@ export default function Parametres() {
                 <MessageSquare className="w-5 h-5 text-emerald-600" />
               </div>
               <div className="flex-1">
-                <p className="font-bold text-slate-900 text-sm">Messages types</p>
+                <p className="font-bold text-slate-900 dark:text-white text-sm">Messages types</p>
                 <p className="text-xs text-slate-500">6 modèles prêts à l'emploi</p>
               </div>
               <ChevronRight className="w-4 h-4 text-slate-400" />
@@ -139,8 +164,20 @@ export default function Parametres() {
                 <Target className="w-5 h-5 text-purple-600" />
               </div>
               <div className="flex-1">
-                <p className="font-bold text-slate-900 text-sm">Mes objectifs</p>
+                <p className="font-bold text-slate-900 dark:text-white text-sm">Mes objectifs</p>
                 <p className="text-xs text-slate-500">Suivre mes KPIs hebdo</p>
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-400" />
+            </div>
+          </button>
+          <button onClick={() => navigate('/export')} className="w-full card hover:shadow-elevated active:scale-[0.98] text-left">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+                <Download className="w-5 h-5 text-blue-600" />
+              </div>
+              <div className="flex-1">
+                <p className="font-bold text-slate-900 dark:text-white text-sm">Exporter mes données</p>
+                <p className="text-xs text-slate-500">RGPD · JSON + CSV</p>
               </div>
               <ChevronRight className="w-4 h-4 text-slate-400" />
             </div>
@@ -167,7 +204,7 @@ export default function Parametres() {
 
         {activeTab === 'entreprise' && (
           <div className="card space-y-3">
-            <h3 className="text-sm font-bold text-slate-900">Informations entreprise</h3>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">Informations entreprise</h3>
             <div>
               <label className="label">Nom de l'entreprise</label>
               <input className="input" value={form.company_name || ''} onChange={e => setForm({...form, company_name: e.target.value})} />
@@ -201,23 +238,23 @@ export default function Parametres() {
         )}
 
         {activeTab === 'clients' && (
-          <ClientsTab clients={clients} addClient={addClient} updateClient={updateClient} deleteClient={deleteClient} />
+          <ClientsTab clients={clients} addClient={addClient} updateClient={deleteClient} deleteClient={deleteClient} />
         )}
 
         {activeTab === 'ouvrages' && (
           <div className="space-y-3">
-            <h3 className="text-sm font-bold text-slate-900">Bibliothèque d'ouvrages ({Object.values(OUVRAGES_BTP).flat().length})</h3>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">Bibliothèque d'ouvrages ({Object.values(OUVRAGES_BTP).flat().length})</h3>
             {Object.entries(OUVRAGES_BTP).map(([metier, ouvrages]) => (
               <details key={metier} className="card" open={metier === 'plomberie'}>
-                <summary className="cursor-pointer font-bold text-slate-900 capitalize flex items-center justify-between">
+                <summary className="cursor-pointer font-bold text-slate-900 dark:text-white capitalize flex items-center justify-between">
                   <span>🔧 {metier} ({ouvrages.length})</span>
                   <span className="text-xs text-slate-500">Cliquer</span>
                 </summary>
                 <div className="mt-3 space-y-2">
                   {ouvrages.map(o => (
-                    <div key={o.ref} className="flex items-center justify-between p-2 bg-slate-50 rounded-lg">
+                    <div key={o.ref} className="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-700 rounded-lg">
                       <div>
-                        <p className="text-sm font-medium text-slate-900">{o.label}</p>
+                        <p className="text-sm font-medium text-slate-900 dark:text-white">{o.label}</p>
                         <p className="text-xs text-slate-500">{o.ref} · TVA {o.tva}%</p>
                       </div>
                       <p className="text-sm font-bold text-chantier">{o.priceHT}€/{o.unit}</p>
@@ -231,7 +268,7 @@ export default function Parametres() {
 
         {activeTab === 'banque' && (
           <div className="card space-y-3">
-            <h3 className="text-sm font-bold text-slate-900">Coordonnées bancaires</h3>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">Coordonnées bancaires</h3>
             <div>
               <label className="label">Banque</label>
               <input className="input" value={form.banque || ''} onChange={e => setForm({...form, banque: e.target.value})} />
@@ -246,7 +283,7 @@ export default function Parametres() {
 
         {activeTab === 'cgv' && (
           <div className="card space-y-3">
-            <h3 className="text-sm font-bold text-slate-900">Conditions Générales de Vente</h3>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">Conditions Générales de Vente</h3>
             <textarea
               className="input min-h-[200px] font-mono text-xs"
               value={form.cgv || ''}
@@ -257,7 +294,7 @@ export default function Parametres() {
           </div>
         )}
 
-        <div className="pt-4 border-t border-slate-200 space-y-2">
+        <div className="pt-4 border-t border-slate-200 dark:border-slate-700 space-y-2">
           <button onClick={handleSignOut} className="w-full text-slate-600 hover:text-slate-900 text-sm font-medium py-3 hover:bg-slate-100 rounded-xl">
             <LogOut className="w-4 h-4 inline mr-2" />
             Se déconnecter
@@ -308,7 +345,7 @@ function ClientsTab({ clients, addClient, updateClient, deleteClient }) {
   return (
     <>
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-bold text-slate-900">Mes clients ({clients.length})</h3>
+        <h3 className="text-sm font-bold text-slate-900 dark:text-white">Mes clients ({clients.length})</h3>
         <button onClick={() => setShowAdd(true)} className="text-chantier text-sm font-semibold flex items-center gap-1">
           <Plus className="w-4 h-4" /> Ajouter
         </button>
@@ -327,7 +364,7 @@ function ClientsTab({ clients, addClient, updateClient, deleteClient }) {
                 <span className="text-chantier font-bold">{c.nom?.[0]?.toUpperCase() || '?'}</span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-slate-900 truncate">{c.nom}</p>
+                <p className="font-semibold text-slate-900 dark:text-white truncate">{c.nom}</p>
                 <p className="text-xs text-slate-500 truncate">{c.email || c.telephone || '—'}</p>
               </div>
               <button onClick={() => setEditing(c)} className="text-xs text-slate-500 hover:text-slate-700 px-2">Éditer</button>

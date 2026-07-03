@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, FileText, TrendingUp, AlertCircle, Briefcase, Euro, Sparkles, ArrowRight, Users, MessageSquare, Target, PenLine, TrendingDown } from 'lucide-react'
+import { Plus, FileText, TrendingUp, AlertCircle, Briefcase, Euro, Sparkles, ArrowRight, Users, MessageSquare, Target, PenLine, TrendingDown, Brain, Wand2, Mic } from 'lucide-react'
 import Header from '../components/Header'
 import StatCard from '../components/StatCard'
 import EmptyState from '../components/EmptyState'
@@ -108,12 +108,25 @@ export default function Dashboard() {
             )}
 
             <div className="grid grid-cols-2 gap-3">
-              <button onClick={() => navigate('/nouveau-devis')} className="card hover:shadow-elevated active:scale-95 transition-all text-left">
-                <div className="w-10 h-10 rounded-xl bg-chantier-50 flex items-center justify-center mb-2">
-                  <FileText className="w-5 h-5 text-chantier" />
+              <button onClick={() => navigate('/wizard-devis')} className="card hover:shadow-elevated active:scale-95 transition-all text-left relative overflow-hidden">
+                <div className="absolute top-0 right-0 bg-gradient-to-l from-chantier to-chantier-light text-white text-[9px] font-bold px-2 py-0.5 rounded-bl-lg">
+                  ✨ GUIDÉ
                 </div>
-                <p className="font-bold text-slate-900 text-sm">Nouveau devis</p>
-                <p className="text-xs text-slate-500">Créer en 2 min</p>
+                <div className="w-10 h-10 rounded-xl bg-chantier-50 flex items-center justify-center mb-2">
+                  <Wand2 className="w-5 h-5 text-chantier" />
+                </div>
+                <p className="font-bold text-slate-900 text-sm">Devis guidé</p>
+                <p className="text-xs text-slate-500">En 4 étapes</p>
+              </button>
+              <button onClick={() => navigate('/voice-input')} className="card hover:shadow-elevated active:scale-95 transition-all text-left relative overflow-hidden">
+                <div className="absolute top-0 right-0 bg-gradient-to-l from-blue-600 to-blue-400 text-white text-[9px] font-bold px-2 py-0.5 rounded-bl-lg">
+                  🎙️ VOCAL
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center mb-2">
+                  <Mic className="w-5 h-5 text-blue-600" />
+                </div>
+                <p className="font-bold text-slate-900 text-sm">Saisie vocale</p>
+                <p className="text-xs text-slate-500">Dicte ton devis</p>
               </button>
               <button onClick={() => navigate('/clients')} className="card hover:shadow-elevated active:scale-95 transition-all text-left">
                 <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center mb-2">
@@ -137,6 +150,26 @@ export default function Dashboard() {
                 <p className="text-xs text-slate-500">Modèles prêts</p>
               </button>
             </div>
+
+            {/* Co-pilote IA - Feature révolutionnaire */}
+            <button
+              onClick={() => navigate('/conseil')}
+              className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl p-4 text-left active:scale-[0.98] transition-transform shadow-elevated"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
+                  <Brain className="w-6 h-6 text-white" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-white flex items-center gap-1.5">
+                    Co-pilote IA
+                    <Sparkles className="w-4 h-4" />
+                  </h3>
+                  <p className="text-white/90 text-xs">Conseils personnalisés pour booster ton activité</p>
+                </div>
+                <ArrowRight className="w-5 h-5 text-white" />
+              </div>
+            </button>
 
             {devis.length > 0 && (
               <div>

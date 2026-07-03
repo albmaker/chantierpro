@@ -4,7 +4,6 @@ import Dashboard from './pages/Dashboard'
 import DevisList from './pages/DevisList'
 import DevisDetail from './pages/DevisDetail'
 import FacturesList from './pages/FacturesList'
-import ScannerIA from './pages/ScannerIA'
 import Parametres from './pages/Parametres'
 import NouveauDevis from './pages/NouveauDevis'
 import Landing from './pages/Landing'
@@ -15,12 +14,18 @@ import Stats from './pages/Stats'
 import Messages from './pages/Messages'
 import Signature from './pages/Signature'
 import Objectifs from './pages/Objectifs'
+import Profil from './pages/Profil'
+import ConseilIA from './pages/ConseilIA'
+import ExportData from './pages/ExportData'
+import WizardDevis from './pages/WizardDevis'
+import VoiceInput from './pages/VoiceInput'
 import { BlogList, BlogPost } from './pages/Blog'
 import { DataProvider, useData } from './contexts/DataContext'
+import { ThemeProvider } from './contexts/ThemeContext'
 
 function LoadingScreen() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50">
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
       <div className="animate-spin w-10 h-10 border-4 border-chantier border-t-transparent rounded-full" />
     </div>
   )
@@ -36,7 +41,7 @@ function AppContent() {
   if (loading) return <LoadingScreen />
 
   return (
-    <div className="min-h-screen max-w-2xl mx-auto bg-slate-50">
+    <div className="min-h-screen max-w-2xl mx-auto bg-slate-50 dark:bg-slate-900">
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/auth" element={<Auth />} />
@@ -48,14 +53,18 @@ function AppContent() {
         <Route path="/devis" element={<DevisList />} />
         <Route path="/devis/:id" element={<DevisDetail />} />
         <Route path="/nouveau-devis" element={<NouveauDevis />} />
+        <Route path="/wizard-devis" element={<WizardDevis />} />
+        <Route path="/voice-input" element={<VoiceInput />} />
         <Route path="/factures" element={<FacturesList />} />
-        <Route path="/scanner" element={<ScannerIA />} />
         <Route path="/clients" element={<Clients />} />
         <Route path="/stats" element={<Stats />} />
         <Route path="/parametres" element={<Parametres />} />
         <Route path="/signature" element={<Signature />} />
         <Route path="/messages" element={<Messages />} />
         <Route path="/objectifs" element={<Objectifs />} />
+        <Route path="/profil" element={<Profil />} />
+        <Route path="/conseil" element={<ConseilIA />} />
+        <Route path="/export" element={<ExportData />} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
@@ -66,9 +75,11 @@ function AppContent() {
 
 function App() {
   return (
-    <DataProvider>
-      <AppContent />
-    </DataProvider>
+    <ThemeProvider>
+      <DataProvider>
+        <AppContent />
+      </DataProvider>
+    </ThemeProvider>
   )
 }
 

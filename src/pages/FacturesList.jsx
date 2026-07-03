@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Plus, FileCheck, AlertCircle, Receipt, Calendar, Mail, Download, Euro, Building2, Hash } from 'lucide-react'
+import { useState, useMemo, useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { Plus, FileCheck, AlertCircle, Receipt, Calendar, Mail, Download, Euro, Building2, CheckCircle2, Sparkles, ChevronRight } from 'lucide-react'
 import Header from '../components/Header'
 import DevisCard, { computeTotals } from '../components/DevisCard'
 import EmptyState from '../components/EmptyState'
@@ -17,10 +17,22 @@ const filters = [
 
 export default function FacturesList() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { factures, devis, updateFacture, getProfile } = useData()
   const [filter, setFilter] = useState('tous')
   const [search, setSearch] = useState('')
   const [selectedFacture, setSelectedFacture] = useState(null)
+  const [highlightId, setHighlightId] = useState(null)
+
+  // Highlight la nouvelle facture si on arrive depuis DevisDetail
+  useEffect(() => {
+    if (location.state?.newFactureId) {
+      setHighlightId(location.state.newFactureId)
+      setTimeout(() => setHighlightId(null), 3000)
+      // Clear le state
+      window.history.replaceState({}, document.title)
+    }
+  }, [location])
 
   const filtered = useMemo(() => {
     return factures.filter(f => {
@@ -28,20 +40,22 @@ export default function FacturesList() {
       const searchLower = (search || '').toLowerCase().trim()
       const matchSearch = !searchLower ||
         (f.client_nom || '').toLowerCase().includes(searchLower) ||
-        (f.numero || '').toLowerCase().includes(searchLower)
+        (f.numero || '').toLowerCase().includes(searchLower) ||
+        (f.metier || '').toLowerCase().includes(searchLower) ||
+        (f.lignes || []).some(l => (l.label || '').toLowerCase().includes(searchLower))
       return matchFilter && matchSearch
     })
   }, [factures, filter, search])
 
-  // Auto-d\u00e9tection des factures en retard (\u00e9ch\u00e9ance pass\u00e9e)
-  useMemo(() => {
+  // Auto-d\u00e9tection des retards (une seule fois)
+  useEffect(() => {
     const today = new Date().toISOString().slice(0, 10)
     factures.forEach(f => {
       if (f.statut === 'en_attente' && f.date_echeance && f.date_echeance < today) {
         updateFacture(f.id, { statut: 'en_retard' })
       }
     })
-  }, [factures])
+  }, []) // eslint-disable-line
 
   const totalImpaye = factures
     .filter(f => f.statut === 'en_attente' || f.statut === 'en_retard')
@@ -62,7 +76,7 @@ export default function FacturesList() {
   }
 
   function relance(facture) {
-    alert(`Relance envoy\u00e9e \u00e0 ${facture.client_nom || 'client'} (simulation)`)
+    alert(`Relance envoyée à ${facture.client_nom || 'client'} (simulation)`)
   }
 
   function downloadPdf(facture) {
@@ -83,7 +97,7 @@ export default function FacturesList() {
           <button
             onClick={() => navigate('/devis')}
             className="w-11 h-11 rounded-full bg-chantier flex items-center justify-center shadow-soft active:scale-95"
-            aria-label="Cr\u00e9er depuis un devis"
+            aria-label="Créer depuis un devis"
           >
             <Plus className="w-5 h-5 text-white" />
           </button>
@@ -91,6 +105,17 @@ export default function FacturesList() {
       />
 
       <div className="px-5 pt-4 space-y-4">
+        {highlightId && (
+          <div className="card bg-emerald-50 border-emerald-200 animate-slide-up">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+              <p className="text-sm font-semibold text-emerald-700">
+                Facture créée avec succès ! Tu peux la voir ci-dessous.
+              </p>
+            </div>
+          </div>
+        )}
+
         <div className="card bg-gradient-to-br from-emerald-50 to-white border-emerald-100">
           <div className="flex items-start gap-3">
             <FileCheck className="w-5 h-5 text-emerald-600 mt-0.5" />
@@ -168,12 +193,16 @@ export default function FacturesList() {
         ) : (
           <div className="space-y-2.5">
             {filtered.map(f => (
-              <DevisCard
+              <div
                 key={f.id}
-                item={f}
-                onClick={() => setSelectedFacture(f)}
-                type="facture"
-              />
+                className={highlightId === f.id ? 'animate-slide-up ring-2 ring-emerald-500 rounded-2xl' : ''}
+              >
+                <DevisCard
+                  item={f}
+                  onClick={() => setSelectedFacture(f)}
+                  type="facture"
+                />
+              </div>
             ))}
           </div>
         )}
@@ -212,16 +241,16 @@ export default function FacturesList() {
               <p className="text-xs text-slate-500 uppercase font-semibold mb-2">Détails</p>
               <div className="space-y-1.5 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-slate-500 flex items-center gap-1"><Calendar className="w-3 h-3" /> Émise le</span>
+                  <span className="text-slate-500">Émise le</span>
                   <span className="font-semibold text-slate-900">{selectedFacture.date_emission}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500 flex items-center gap-1"><Calendar className="w-3 h-3" /> Échéance</span>
+                  <span className="text-slate-500">Échéance</span>
                   <span className="font-semibold text-slate-900">{selectedFacture.date_echeance}</span>
                 </div>
                 {selectedFacture.date_paiement && (
                   <div className="flex justify-between">
-                    <span className="text-emerald-600 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Payée le</span>
+                    <span className="text-emerald-600">Payée le</span>
                     <span className="font-semibold text-emerald-700">{selectedFacture.date_paiement}</span>
                   </div>
                 )}
@@ -248,7 +277,7 @@ export default function FacturesList() {
             <div className="space-y-2">
               {selectedFacture.statut !== 'payee' && (
                 <button onClick={() => markPaid(selectedFacture)} className="btn-primary w-full bg-emerald-600 hover:bg-emerald-700">
-                  <CheckCircle className="w-4 h-4 inline mr-2" />
+                  <CheckCircle2 className="w-4 h-4 inline mr-2" />
                   Marquer comme payée
                 </button>
               )}
@@ -268,8 +297,4 @@ export default function FacturesList() {
       </Modal>
     </div>
   )
-}
-
-function CheckCircle(props) {
-  return <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
 }

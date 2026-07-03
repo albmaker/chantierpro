@@ -13,6 +13,7 @@ const STORAGE_KEYS = {
   clients: 'chantierpro_clients',
   templates: 'chantierpro_templates',
   activity: 'chantierpro_activity',
+  customObjectives: 'chantierpro_custom_objectives',
 }
 
 function loadFromStorage(key, defaultValue) {
@@ -86,6 +87,7 @@ export function DataProvider({ children }) {
   const [clients, setClients] = useState(() => loadFromStorage(STORAGE_KEYS.clients, []))
   const [templates, setTemplates] = useState(() => loadFromStorage(STORAGE_KEYS.templates, DEFAULT_TEMPLATES))
   const [activity, setActivity] = useState(() => loadFromStorage(STORAGE_KEYS.activity, []))
+  const [customObjectives, setCustomObjectives] = useState(() => loadFromStorage(STORAGE_KEYS.customObjectives, []))
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -153,6 +155,7 @@ export function DataProvider({ children }) {
   useEffect(() => { saveToStorage(STORAGE_KEYS.clients, clients) }, [clients])
   useEffect(() => { saveToStorage(STORAGE_KEYS.templates, templates) }, [templates])
   useEffect(() => { saveToStorage(STORAGE_KEYS.activity, activity.slice(0, 50)) }, [activity])
+  useEffect(() => { saveToStorage(STORAGE_KEYS.customObjectives, customObjectives) }, [customObjectives])
 
   // === ACTIVITY LOG ===
   function logActivity(type, label, metadata = {}) {
@@ -344,14 +347,24 @@ export function DataProvider({ children }) {
     localStorage.removeItem(STORAGE_KEYS.activity)
   }
 
+  // === OBJECTIFS PERSONNALISÉS ===
+  function addCustomObjective(obj) {
+    setCustomObjectives(prev => [...prev, obj])
+  }
+
+  function removeCustomObjective(id) {
+    setCustomObjectives(prev => prev.filter(o => o.id !== id))
+  }
+
   const value = {
     user, loading,
     devis, factures, profile, plan,
-    clients, templates, activity,
+    clients, templates, activity, customObjectives,
     addDevis, updateDevis, deleteDevis,
     addFacture, updateFacture,
     addClient, updateClient, deleteClient,
     addTemplate, deleteTemplate,
+    addCustomObjective, removeCustomObjective,
     saveProfile, getProfile,
     signOut, upgradePlan, clearAllData,
     isPro: plan === 'pro' || plan === 'business',

@@ -1,10 +1,11 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Download, CheckCircle, XCircle, FileText, Trash2, Send, Copy, Mail, Edit3, Save, X } from 'lucide-react'
+import { ArrowLeft, Download, CheckCircle, XCircle, FileText, Trash2, Send, Copy, Mail, Edit3, Save, X, CheckCircle2 } from 'lucide-react'
 import { useState } from 'react'
 import { useData } from '../contexts/DataContext'
 import { computeTotals } from '../components/DevisCard'
 import { generatePDF, generateFactureFromDevis } from '../lib/pdfGenerator'
 import Modal from '../components/Modal'
+import RiskDetector from '../components/RiskDetector'
 
 const statusStyles = {
   en_attente: 'bg-amber-50 text-amber-700 border-amber-200',
@@ -15,12 +16,13 @@ const statusStyles = {
 export default function DevisDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { devis, updateDevis, deleteDevis, addFacture, getProfile, addDevis } = useData()
+  const { devis, factures, updateDevis, deleteDevis, addFacture, getProfile, addDevis } = useData()
   const [pdfLoading, setPdfLoading] = useState(false)
   const [showSendModal, setShowSendModal] = useState(false)
   const [sendResult, setSendResult] = useState(null)
   const [editing, setEditing] = useState(false)
   const [editForm, setEditForm] = useState(null)
+  const [converting, setConverting] = useState(false)
 
   const devisItem = devis.find(d => d.id === id)
 
@@ -63,7 +65,7 @@ export default function DevisDetail() {
         alert('Erreur PDF : ' + (result.error || 'inconnue'))
       }
     } catch (err) {
-      alert('Erreur lors de la génération du PDF : ' + err.message)
+      alert('Erreur : ' + err.message)
     } finally {
       setPdfLoading(false)
     }
@@ -80,19 +82,30 @@ export default function DevisDetail() {
     }
   }
 
+  // === FIX BUG FACTURES : cr\u00e9ation synchrone puis navigation ===
   function handleConvertToFacture() {
+    if (converting) return // Anti double-clic
+
+    setConverting(true)
     try {
+      // 1) G\u00e9n\u00e9re l'objet facture
       const facture = generateFactureFromDevis(devisItem, proProfile)
-      // Ajout synchrone + verification
+
+      // 2) Ajoute imm\u00e9diatement au state (synchrone)
       addFacture(facture)
+
+      // 3) Marque le devis comme accept\u00e9
       updateDevis(devisItem.id, { statut: 'accepte' })
-      // Force la navigation apr\u00e8s un court d\u00e9lai pour laisser le state se mettre \u00e0 jour
+
+      // 4) Force un re-render avant de naviguer
       setTimeout(() => {
-        alert(`Facture ${facture.numero} cr\u00e9\u00e9e ! Redirection...`)
-        navigate('/factures')
-      }, 300)
+        setConverting(false)
+        // 5) Navigue vers la liste
+        navigate('/factures', { state: { newFactureId: facture.id } })
+      }, 200)
     } catch (err) {
-      alert('Erreur lors de la conversion : ' + err.message)
+      setConverting(false)
+      alert('Erreur : ' + err.message)
     }
   }
 
@@ -107,7 +120,7 @@ export default function DevisDetail() {
         date_validite: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
       }
       addDevis(newDevis)
-      alert('Devis dupliqu\u00e9')
+      alert('Devis dupliqué')
       navigate(`/devis/${newDevis.id}`)
     } catch (err) {
       alert('Erreur : ' + err.message)
@@ -126,7 +139,7 @@ export default function DevisDetail() {
         <button onClick={() => navigate(-1)} className="w-10 h-10 -ml-2 rounded-full hover:bg-slate-100 flex items-center justify-center">
           <ArrowLeft className="w-5 h-5 text-slate-700" />
         </button>
-        <div className="text-center flex-1 min-w-0">
+        <div className="text-center flex-1 min-w-0 px-2">
           <p className="text-[10px] text-slate-500 font-mono truncate">{devisItem.numero}</p>
           <h1 className="text-base font-bold text-slate-900 truncate">
             {editing ? 'Édition' : 'Détail du devis'}
@@ -162,7 +175,6 @@ export default function DevisDetail() {
           </p>
         </div>
 
-        {/* Client */}
         <div className="card">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-xs text-slate-500 uppercase tracking-wider font-bold">Client</h3>
@@ -248,7 +260,15 @@ export default function DevisDetail() {
           </div>
         </div>
 
-        {/* Notes */}
+        {/* Analyse de risques */}
+        {!editing && (
+          <RiskDetector
+            devis={devisItem}
+            allDevis={devis}
+            allFactures={factures}
+          />
+        )}
+
         <div className="card">
           <h3 className="text-xs text-slate-500 uppercase tracking-wider font-bold mb-2">Notes</h3>
           {editing ? (
@@ -272,9 +292,18 @@ export default function DevisDetail() {
             </>
           )}
           {devisItem.statut === 'accepte' && !editing && (
-            <button onClick={handleConvertToFacture} className="btn-primary col-span-2">
-              <FileText className="w-4 h-4 inline mr-2" />
-              Convertir en facture
+            <button onClick={handleConvertToFacture} disabled={converting} className="btn-primary col-span-2 disabled:opacity-50">
+              {converting ? (
+                <>
+                  <div className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                  Création en cours...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-4 h-4 inline mr-2" />
+                  Convertir en facture
+                </>
+              )}
             </button>
           )}
           {!editing && (
@@ -306,9 +335,6 @@ export default function DevisDetail() {
             <Send className="w-4 h-4 inline mr-2" />
             Envoyer (simulation)
           </button>
-          <p className="text-xs text-slate-500 text-center">
-            L'envoi réel nécessite la config d'un service email.
-          </p>
         </div>
       </Modal>
 

@@ -1,12 +1,12 @@
 import { NavLink } from 'react-router-dom'
-import { Home, FileText, Receipt, BarChart3, Plus, MessageSquare, Users } from 'lucide-react'
+import { Home, FileText, Receipt, BarChart3, User, Plus } from 'lucide-react'
 
 const navItems = [
   { to: '/dashboard', icon: Home, label: 'Accueil' },
   { to: '/devis', icon: FileText, label: 'Devis' },
   { to: '/nouveau-devis', icon: Plus, label: 'Créer', special: true },
   { to: '/factures', icon: Receipt, label: 'Factures' },
-  { to: '/stats', icon: BarChart3, label: 'Stats' },
+  { to: '/profil', icon: User, label: 'Profil' },
 ]
 
 export default function BottomNav() {
