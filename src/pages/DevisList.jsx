@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Filter } from 'lucide-react'
+import { Plus, Filter, FileText } from 'lucide-react'
 import Header from '../components/Header'
 import DevisCard from '../components/DevisCard'
 import EmptyState from '../components/EmptyState'
@@ -19,11 +19,10 @@ export default function DevisList() {
   const [filter, setFilter] = useState('tous')
   const [search, setSearch] = useState('')
 
-  // Filtrage + recherche combinés
   const filtered = useMemo(() => {
     return devis.filter(d => {
       const matchFilter = filter === 'tous' || d.statut === filter
-      const searchLower = search.toLowerCase().trim()
+      const searchLower = (search || '').toLowerCase().trim()
       const matchSearch = !searchLower ||
         (d.client_nom || '').toLowerCase().includes(searchLower) ||
         (d.numero || '').toLowerCase().includes(searchLower) ||
@@ -42,7 +41,7 @@ export default function DevisList() {
         action={
           <button
             onClick={() => navigate('/nouveau-devis')}
-            className="w-10 h-10 rounded-full bg-chantier flex items-center justify-center shadow-lg shadow-chantier/30 active:scale-95"
+            className="w-11 h-11 rounded-full bg-chantier flex items-center justify-center shadow-soft active:scale-95"
             aria-label="Nouveau devis"
           >
             <Plus className="w-5 h-5 text-white" />
@@ -51,16 +50,15 @@ export default function DevisList() {
       />
 
       <div className="px-5 pt-4 space-y-4">
-        {/* Filtres */}
         <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
           {filters.map(f => (
             <button
               key={f.id}
               onClick={() => setFilter(f.id)}
-              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+              className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-colors ${
                 filter === f.id
                   ? 'bg-chantier text-white'
-                  : 'bg-navy-700 text-gray-300 hover:bg-navy-600'
+                  : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
               }`}
             >
               {f.label}
@@ -68,26 +66,23 @@ export default function DevisList() {
           ))}
         </div>
 
-        {/* Liste */}
         {devis.length === 0 ? (
           <EmptyState
-            icon={Filter}
+            icon={FileText}
             title="Aucun devis pour l'instant"
-            description="Vos devis apparaîtront ici. Commencez par en créer un ou utilisez le scanner IA."
+            description="Vos devis apparaîtront ici. Créez-en un pour démarrer."
             actionLabel="Créer mon premier devis"
             onAction={() => navigate('/nouveau-devis')}
-            secondaryLabel="Scanner une photo de chantier"
-            onSecondary={() => navigate('/scanner')}
           />
         ) : filtered.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-gray-400">Aucun résultat pour "{search}"</p>
-            <button onClick={() => { setSearch(''); setFilter('tous') }} className="text-chantier text-sm mt-2 hover:underline">
-              Réinitialiser les filtres
+            <p className="text-slate-500">Aucun résultat pour "{search}"</p>
+            <button onClick={() => { setSearch(''); setFilter('tous') }} className="text-chantier text-sm mt-2 font-semibold hover:underline">
+              Réinitialiser
             </button>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             {filtered.map(d => (
               <DevisCard
                 key={d.id}

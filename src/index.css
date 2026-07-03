@@ -7,8 +7,7 @@
     -webkit-tap-highlight-color: transparent;
   }
   body {
-    @apply bg-navy-900 text-white font-sans antialiased;
-    background: linear-gradient(180deg, #0a1322 0%, #0F1B2D 100%);
+    @apply bg-slate-50 text-slate-900 font-sans antialiased;
     min-height: 100vh;
   }
   * {
@@ -18,37 +17,36 @@
 
 @layer components {
   .btn-primary {
-    @apply bg-chantier hover:bg-chantier-dark text-white font-semibold py-3 px-6 rounded-2xl transition-all duration-200 active:scale-95 shadow-lg shadow-chantier/20;
+    @apply bg-chantier hover:bg-chantier-dark text-white font-semibold py-3 px-6 rounded-2xl transition-all duration-200 active:scale-95 shadow-soft;
   }
   .btn-secondary {
-    @apply bg-navy-700 hover:bg-navy-600 text-white font-medium py-3 px-6 rounded-2xl transition-all duration-200 border border-navy-600;
+    @apply bg-white hover:bg-slate-50 text-slate-700 font-medium py-3 px-6 rounded-2xl transition-all duration-200 border border-slate-200 shadow-card;
+  }
+  .btn-ghost {
+    @apply text-slate-600 hover:text-slate-900 hover:bg-slate-100 font-medium py-2 px-4 rounded-xl transition-all duration-200;
   }
   .card {
-    @apply bg-navy-700/80 backdrop-blur rounded-2xl p-5 border border-navy-600/50;
+    @apply bg-white rounded-2xl p-5 shadow-card border border-slate-100;
   }
   .input {
-    @apply w-full bg-navy-800 border border-navy-600 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:border-chantier focus:outline-none transition-colors;
+    @apply w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-900 placeholder-slate-400 focus:border-chantier focus:ring-2 focus:ring-chantier/20 focus:outline-none transition-all;
+  }
+  .input-bare {
+    @apply w-full bg-transparent border-0 focus:outline-none text-slate-900 placeholder-slate-400;
+  }
+  .label {
+    @apply block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide;
   }
   .badge {
     @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium;
   }
-  .stat-card {
-    @apply card flex flex-col gap-1;
-  }
 }
 
-/* Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: #0a1322;
-}
-::-webkit-scrollbar-thumb {
-  background: #243757;
-  border-radius: 3px;
-}
+/* Scrollbar douce */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #F1F5F9; }
+::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
 
 /* Animations */
 @keyframes slideUp {
@@ -59,10 +57,18 @@
   animation: slideUp 0.3s ease-out;
 }
 
-@keyframes pulse-slow {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
-.animate-pulse-slow {
-  animation: pulse-slow 2s ease-in-out infinite;
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+.animate-scale-in {
+  animation: scaleIn 0.2s ease-out;
 }

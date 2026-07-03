@@ -10,32 +10,30 @@ import NouveauDevis from './pages/NouveauDevis'
 import Landing from './pages/Landing'
 import Auth from './pages/Auth'
 import Pricing from './pages/Pricing'
+import Clients from './pages/Clients'
+import Stats from './pages/Stats'
 import { BlogList, BlogPost } from './pages/Blog'
 import { DataProvider, useData } from './contexts/DataContext'
 
 function LoadingScreen() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-navy-900">
-      <div className="animate-spin w-8 h-8 border-2 border-chantier border-t-transparent rounded-full" />
+    <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="animate-spin w-10 h-10 border-4 border-chantier border-t-transparent rounded-full" />
     </div>
   )
 }
 
-function ProtectedRoute({ children }) {
-  const { user, loading } = useData()
-  if (loading) return <LoadingScreen />
-  // On autorise l'accès même sans user (mode démo local)
-  return children
-}
-
 function AppContent() {
   const location = useLocation()
+  const { loading } = useData()
   const hideNavRoutes = ['/', '/auth', '/pricing']
   const blogRoutes = location.pathname.startsWith('/blog')
   const showNav = !hideNavRoutes.includes(location.pathname) && !blogRoutes
 
+  if (loading) return <LoadingScreen />
+
   return (
-    <div className="min-h-screen max-w-2xl mx-auto bg-navy-900">
+    <div className="min-h-screen max-w-2xl mx-auto bg-slate-50">
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/auth" element={<Auth />} />
@@ -43,13 +41,15 @@ function AppContent() {
         <Route path="/blog" element={<BlogList />} />
         <Route path="/blog/:slug" element={<BlogPost />} />
 
-        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-        <Route path="/devis" element={<ProtectedRoute><DevisList /></ProtectedRoute>} />
-        <Route path="/devis/:id" element={<ProtectedRoute><DevisDetail /></ProtectedRoute>} />
-        <Route path="/nouveau-devis" element={<ProtectedRoute><NouveauDevis /></ProtectedRoute>} />
-        <Route path="/factures" element={<ProtectedRoute><FacturesList /></ProtectedRoute>} />
-        <Route path="/scanner" element={<ProtectedRoute><ScannerIA /></ProtectedRoute>} />
-        <Route path="/parametres" element={<ProtectedRoute><Parametres /></ProtectedRoute>} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/devis" element={<DevisList />} />
+        <Route path="/devis/:id" element={<DevisDetail />} />
+        <Route path="/nouveau-devis" element={<NouveauDevis />} />
+        <Route path="/factures" element={<FacturesList />} />
+        <Route path="/scanner" element={<ScannerIA />} />
+        <Route path="/clients" element={<Clients />} />
+        <Route path="/stats" element={<Stats />} />
+        <Route path="/parametres" element={<Parametres />} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

@@ -1,33 +1,37 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, FileText, TrendingUp, AlertCircle, Sparkles, Briefcase } from 'lucide-react'
+import { Plus, FileText, TrendingUp, AlertCircle, Briefcase, Euro, Sparkles, ArrowRight, Users } from 'lucide-react'
 import Header from '../components/Header'
 import StatCard from '../components/StatCard'
 import EmptyState from '../components/EmptyState'
+import DevisCard, { computeTotals } from '../components/DevisCard'
 import { useData } from '../contexts/DataContext'
-import { computeTotals } from '../components/DevisCard'
 
 export default function Dashboard() {
   const navigate = useNavigate()
-  const { devis, factures, profile } = useData()
+  const { devis, factures, profile, clients } = useData()
 
-  // Stats calculées sur les VRAIES données
+  // Stats calculées
   const facturesEnAttente = factures.filter(f => f.statut === 'en_attente' || f.statut === 'en_retard')
+  const facturesEnRetard = factures.filter(f => f.statut === 'en_retard')
   const caPaye = factures
     .filter(f => f.statut === 'payee')
     .reduce((s, f) => s + computeTotals(f.lignes).totalTTC, 0)
+  const caEnAttente = facturesEnAttente.reduce((s, f) => s + computeTotals(f.lignes).totalTTC, 0)
+  const devisEnAttente = devis.filter(d => d.statut === 'en_attente')
 
   const firstName = profile?.company_name?.split(' ')[0] || 'Artisan'
+  const isNewUser = devis.length === 0 && factures.length === 0
 
   return (
     <div className="pb-24">
       <Header
         title={`Bonjour ${firstName} 👋`}
-        subtitle={devis.length === 0 ? "Commençons par créer votre 1er devis" : `${devis.length} devis au total`}
+        subtitle={isNewUser ? "Bienvenue, configurons votre espace" : `${devis.length} devis · ${factures.length} factures`}
         action={
           <button
             onClick={() => navigate('/nouveau-devis')}
-            className="w-10 h-10 rounded-full bg-chantier flex items-center justify-center shadow-lg shadow-chantier/30 active:scale-95"
+            className="w-11 h-11 rounded-full bg-chantier flex items-center justify-center shadow-soft active:scale-95"
             aria-label="Nouveau devis"
           >
             <Plus className="w-5 h-5 text-white" />
@@ -36,40 +40,48 @@ export default function Dashboard() {
       />
 
       <div className="px-5 pt-4 space-y-4">
-        {/* Empty state complet pour nouvel utilisateur */}
-        {devis.length === 0 && factures.length === 0 ? (
+        {isNewUser ? (
           <>
-            <div className="grid grid-cols-2 gap-3">
-              <StatCard label="CA encaissé" value="0" suffix="€" icon={<TrendingUp className="w-4 h-4" />} />
-              <StatCard label="Devis créés" value="0" icon={<FileText className="w-4 h-4" />} />
-              <StatCard label="Factures" value="0" icon={<Briefcase className="w-4 h-4" />} />
-              <StatCard label="En attente" value="0" suffix="€" color="text-gray-500" icon={<AlertCircle className="w-4 h-4" />} />
-            </div>
-
-            <button
-              onClick={() => navigate('/scanner')}
-              className="w-full bg-gradient-to-r from-chantier to-chantier-dark rounded-2xl p-5 text-left active:scale-[0.98] transition-transform"
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
-                  <span className="text-2xl">📸</span>
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-bold text-white text-lg">Créez votre 1er devis en 30 sec</h3>
-                  <p className="text-white/90 text-sm">Photo du chantier → devis auto-généré par l'IA</p>
+            {/* Onboarding pour nouvel utilisateur */}
+            <div className="card bg-gradient-to-br from-chantier-50 to-white border-chantier-100">
+              <div className="flex items-start gap-3 mb-3">
+                <Sparkles className="w-5 h-5 text-chantier flex-shrink-0 mt-0.5" />
+                <div>
+                  <h2 className="font-bold text-slate-900">Bienvenue sur ChantierPro</h2>
+                  <p className="text-sm text-slate-600 mt-1">
+                    En 3 étapes, votre espace est prêt.
+                  </p>
                 </div>
               </div>
-            </button>
+              <div className="space-y-2 mt-4">
+                {[
+                  { num: 1, label: 'Complétez votre profil', done: !!profile?.company_name, link: '/parametres' },
+                  { num: 2, label: 'Créez votre 1er devis', done: devis.length > 0, link: '/nouveau-devis' },
+                  { num: 3, label: 'Activez un plan', done: false, link: '/pricing' },
+                ].map((step) => (
+                  <button
+                    key={step.num}
+                    onClick={() => navigate(step.link)}
+                    className="w-full flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-200 hover:border-chantier transition-colors text-left"
+                  >
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${step.done ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                      {step.done ? '✓' : step.num}
+                    </div>
+                    <span className={`text-sm flex-1 ${step.done ? 'text-slate-400 line-through' : 'text-slate-700 font-medium'}`}>
+                      {step.label}
+                    </span>
+                    <ArrowRight className="w-4 h-4 text-slate-400" />
+                  </button>
+                ))}
+              </div>
+            </div>
 
-            <EmptyState
-              icon={FileText}
-              title="Aucun devis pour l'instant"
-              description="Commencez par créer un devis manuellement ou utilisez le scanner IA pour gagner du temps."
-              actionLabel="Créer un devis"
-              onAction={() => navigate('/nouveau-devis')}
-              secondaryLabel="Ou scanner une photo de chantier"
-              onSecondary={() => navigate('/scanner')}
-            />
+            <div className="grid grid-cols-2 gap-3">
+              <StatCard label="CA" value="0" suffix="€" icon={<Euro className="w-4 h-4" />} />
+              <StatCard label="Devis" value="0" icon={<FileText className="w-4 h-4" />} />
+              <StatCard label="Factures" value="0" icon={<Briefcase className="w-4 h-4" />} />
+              <StatCard label="Clients" value="0" icon={<Users className="w-4 h-4" />} />
+            </div>
           </>
         ) : (
           <>
@@ -79,73 +91,66 @@ export default function Dashboard() {
                 label="CA encaissé"
                 value={caPaye.toFixed(0)}
                 suffix="€"
-                color="text-white"
-                icon={<TrendingUp className="w-4 h-4" />}
-              />
-              <StatCard
-                label="Devis"
-                value={devis.length}
-                color="text-white"
-                icon={<FileText className="w-4 h-4" />}
-              />
-              <StatCard
-                label="Factures"
-                value={factures.length}
-                color="text-white"
-                icon={<Briefcase className="w-4 h-4" />}
+                color="text-emerald-600"
+                icon={<Euro className="w-4 h-4" />}
               />
               <StatCard
                 label="En attente"
-                value={facturesEnAttente.length}
-                suffix=" facture(s)"
-                color={facturesEnAttente.length > 0 ? "text-red-400" : "text-gray-500"}
+                value={caEnAttente.toFixed(0)}
+                suffix="€"
+                color={caEnAttente > 0 ? 'text-amber-600' : 'text-slate-500'}
+                icon={<TrendingUp className="w-4 h-4" />}
+              />
+              <StatCard
+                label="Devis en cours"
+                value={devisEnAttente.length}
+                color="text-slate-900"
+                icon={<FileText className="w-4 h-4" />}
+              />
+              <StatCard
+                label={facturesEnRetard.length > 0 ? "En retard" : "Factures"}
+                value={facturesEnRetard.length > 0 ? facturesEnRetard.length : factures.length}
+                color={facturesEnRetard.length > 0 ? "text-red-600" : "text-slate-900"}
                 icon={<AlertCircle className="w-4 h-4" />}
               />
             </div>
 
-            {/* CTA Scanner IA toujours visible */}
-            <button
-              onClick={() => navigate('/scanner')}
-              className="w-full bg-gradient-to-r from-chantier to-chantier-dark rounded-2xl p-4 text-left active:scale-[0.98] transition-transform"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-                  <Sparkles className="w-5 h-5 text-white" />
+            {/* Actions rapides */}
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => navigate('/nouveau-devis')}
+                className="card hover:shadow-elevated active:scale-95 transition-all text-left"
+              >
+                <div className="w-10 h-10 rounded-xl bg-chantier-50 flex items-center justify-center mb-2">
+                  <FileText className="w-5 h-5 text-chantier" />
                 </div>
-                <div className="flex-1">
-                  <h3 className="font-bold text-white">Devis en 1 photo</h3>
-                  <p className="text-white/90 text-xs">L'IA analyse votre chantier et génère le devis</p>
+                <p className="font-semibold text-slate-900 text-sm">Nouveau devis</p>
+                <p className="text-xs text-slate-500">Créer en 2 min</p>
+              </button>
+              <button
+                onClick={() => navigate('/clients')}
+                className="card hover:shadow-elevated active:scale-95 transition-all text-left"
+              >
+                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center mb-2">
+                  <Users className="w-5 h-5 text-blue-600" />
                 </div>
-              </div>
-            </button>
+                <p className="font-semibold text-slate-900 text-sm">Mes clients</p>
+                <p className="text-xs text-slate-500">{clients.length} contact{clients.length > 1 ? 's' : ''}</p>
+              </button>
+            </div>
 
             {/* Derniers devis */}
             {devis.length > 0 && (
               <div>
                 <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-lg font-semibold text-white">Derniers devis</h2>
-                  <button onClick={() => navigate('/devis')} className="text-sm text-chantier font-medium">
+                  <h2 className="text-lg font-bold text-slate-900">Derniers devis</h2>
+                  <button onClick={() => navigate('/devis')} className="text-sm text-chantier font-semibold hover:underline">
                     Voir tout →
                   </button>
                 </div>
                 <div className="space-y-2">
                   {devis.slice(0, 3).map(d => (
-                    <div
-                      key={d.id}
-                      onClick={() => navigate(`/devis/${d.id}`)}
-                      className="card flex items-center gap-3 active:scale-[0.98] cursor-pointer hover:bg-navy-600/80"
-                    >
-                      <div className="w-10 h-10 rounded-xl bg-navy-800 flex items-center justify-center flex-shrink-0">
-                        <FileText className="w-5 h-5 text-chantier" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-white truncate">{d.client_nom || 'Client'}</p>
-                        <p className="text-xs text-gray-400">{d.numero}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold text-white">{computeTotals(d.lignes).totalTTC.toFixed(0)}€</p>
-                      </div>
-                    </div>
+                    <DevisCard key={d.id} item={d} onClick={() => navigate(`/devis/${d.id}`)} type="devis" />
                   ))}
                 </div>
               </div>
