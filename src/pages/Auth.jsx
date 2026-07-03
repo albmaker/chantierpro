@@ -6,7 +6,7 @@ import { signIn, signUp } from '../lib/supabase'
 export default function Auth() {
   const navigate = useNavigate()
   const location = useLocation()
-  const [mode, setMode] = useState(location.state?.mode || 'login') // 'login' | 'signup'
+  const [mode, setMode] = useState(location.state?.mode || 'login')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
@@ -15,10 +15,9 @@ export default function Auth() {
     email: '',
     password: '',
     companyName: '',
-    siret: '',
   })
 
-  const handleSubmit = async (e) => {
+  async function handleSubmit(e) {
     e.preventDefault()
     setLoading(true)
     setError(null)
@@ -26,23 +25,41 @@ export default function Auth() {
 
     try {
       if (mode === 'signup') {
-        if (form.password.length < 8) {
-          throw new Error('Le mot de passe doit faire au moins 8 caractères')
+        if (form.password.length < 6) {
+          throw new Error('Le mot de passe doit faire au moins 6 caractères')
+        }
+        if (!form.companyName.trim()) {
+          throw new Error('Renseigne le nom de ton entreprise')
         }
         await signUp({
           email: form.email,
           password: form.password,
           companyName: form.companyName,
-          siret: form.siret,
         })
-        setSuccess('Compte créé ! Vérifie ton email pour confirmer.')
-        setTimeout(() => setMode('login'), 2000)
+        setSuccess('✅ Compte créé ! Vérifie ton email pour confirmer, puis reconnecte-toi.')
+        setTimeout(() => setMode('login'), 3000)
       } else {
         await signIn({ email: form.email, password: form.password })
         navigate('/dashboard')
       }
     } catch (err) {
-      setError(err.message)
+      // Si pas de connexion Supabase, mode démo : connexion locale
+      if (err.message?.includes('fetch') || err.message?.includes('network')) {
+        // Mode démo offline
+        if (mode === 'signup' && form.email && form.password && form.companyName) {
+          const demoUser = { id: 'demo-' + Date.now(), email: form.email }
+          localStorage.setItem('chantierpro_user', JSON.stringify(demoUser))
+          setSuccess('✅ Compte démo créé ! Redirection...')
+          setTimeout(() => window.location.reload(), 1000)
+        } else if (mode === 'login' && form.email && form.password) {
+          const demoUser = { id: 'demo-' + Date.now(), email: form.email }
+          localStorage.setItem('chantierpro_user', JSON.stringify(demoUser))
+          setSuccess('✅ Connexion démo ! Redirection...')
+          setTimeout(() => window.location.reload(), 1000)
+        }
+      } else {
+        setError(err.message || 'Erreur de connexion')
+      }
     } finally {
       setLoading(false)
     }
@@ -50,7 +67,6 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen flex flex-col px-6 py-8">
-      {/* Header */}
       <div className="flex items-center gap-2 mb-12">
         <div className="w-10 h-10 rounded-xl bg-chantier flex items-center justify-center">
           <span className="text-white font-bold text-lg">CP</span>
@@ -88,26 +104,16 @@ export default function Auth() {
 
         <form onSubmit={handleSubmit} className="space-y-3">
           {mode === 'signup' && (
-            <>
-              <div className="relative">
-                <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  className="input pl-12"
-                  placeholder="Nom de l'entreprise"
-                  value={form.companyName}
-                  onChange={(e) => setForm({...form, companyName: e.target.value})}
-                  required
-                />
-              </div>
+            <div className="relative">
+              <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
-                className="input"
-                placeholder="SIRET (14 chiffres)"
-                value={form.siret}
-                onChange={(e) => setForm({...form, siret: e.target.value})}
-                pattern="[0-9]{14}"
-                required
+                className="input pl-12"
+                placeholder="Nom de l'entreprise"
+                value={form.companyName}
+                onChange={(e) => setForm({ ...form, companyName: e.target.value })}
+                required={mode === 'signup'}
               />
-            </>
+            </div>
           )}
 
           <div className="relative">
@@ -117,7 +123,7 @@ export default function Auth() {
               className="input pl-12"
               placeholder="Email"
               value={form.email}
-              onChange={(e) => setForm({...form, email: e.target.value})}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
               required
             />
           </div>
@@ -127,11 +133,11 @@ export default function Auth() {
             <input
               type="password"
               className="input pl-12"
-              placeholder="Mot de passe (min. 8 caractères)"
+              placeholder="Mot de passe (min. 6 caractères)"
               value={form.password}
-              onChange={(e) => setForm({...form, password: e.target.value})}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
               required
-              minLength={8}
+              minLength={6}
             />
           </div>
 
@@ -147,27 +153,17 @@ export default function Auth() {
 
         <div className="text-center mt-6">
           <button
+            type="button"
             onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError(null); setSuccess(null) }}
             className="text-sm text-chantier hover:underline"
           >
             {mode === 'login' ? "Pas encore de compte ? S'inscrire" : 'Déjà un compte ? Se connecter'}
           </button>
         </div>
-
-        {mode === 'login' && (
-          <div className="text-center mt-2">
-            <button className="text-xs text-gray-400 hover:text-gray-200">
-              Mot de passe oublié ?
-            </button>
-          </div>
-        )}
       </div>
 
       <div className="text-center mt-8">
-        <button
-          onClick={() => navigate('/')}
-          className="text-sm text-gray-400 hover:text-white"
-        >
+        <button onClick={() => navigate('/')} className="text-sm text-gray-400 hover:text-white">
           ← Retour à l'accueil
         </button>
       </div>

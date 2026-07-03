@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Filter } from 'lucide-react'
 import Header from '../components/Header'
 import DevisCard from '../components/DevisCard'
-import { DEMO_DEVIS } from '../data/ouvrages'
+import EmptyState from '../components/EmptyState'
+import { useData } from '../contexts/DataContext'
 
 const filters = [
   { id: 'tous', label: 'Tous' },
@@ -14,21 +15,35 @@ const filters = [
 
 export default function DevisList() {
   const navigate = useNavigate()
+  const { devis } = useData()
   const [filter, setFilter] = useState('tous')
+  const [search, setSearch] = useState('')
 
-  const filtered = filter === 'tous'
-    ? DEMO_DEVIS
-    : DEMO_DEVIS.filter(d => d.statut === filter)
+  // Filtrage + recherche combinés
+  const filtered = useMemo(() => {
+    return devis.filter(d => {
+      const matchFilter = filter === 'tous' || d.statut === filter
+      const searchLower = search.toLowerCase().trim()
+      const matchSearch = !searchLower ||
+        (d.client_nom || '').toLowerCase().includes(searchLower) ||
+        (d.numero || '').toLowerCase().includes(searchLower) ||
+        (d.client_email || '').toLowerCase().includes(searchLower)
+      return matchFilter && matchSearch
+    })
+  }, [devis, filter, search])
 
   return (
     <div className="pb-24">
       <Header
         title="Mes devis"
-        subtitle={`${DEMO_DEVIS.length} devis au total`}
+        subtitle={`${devis.length} devis au total`}
+        search={search}
+        onSearchChange={setSearch}
         action={
           <button
             onClick={() => navigate('/nouveau-devis')}
             className="w-10 h-10 rounded-full bg-chantier flex items-center justify-center shadow-lg shadow-chantier/30 active:scale-95"
+            aria-label="Nouveau devis"
           >
             <Plus className="w-5 h-5 text-white" />
           </button>
@@ -54,32 +69,34 @@ export default function DevisList() {
         </div>
 
         {/* Liste */}
-        <div className="space-y-2">
-          {filtered.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-gray-400">Aucun devis dans cette catégorie</p>
-            </div>
-          ) : (
-            filtered.map(d => (
+        {devis.length === 0 ? (
+          <EmptyState
+            icon={Filter}
+            title="Aucun devis pour l'instant"
+            description="Vos devis apparaîtront ici. Commencez par en créer un ou utilisez le scanner IA."
+            actionLabel="Créer mon premier devis"
+            onAction={() => navigate('/nouveau-devis')}
+            secondaryLabel="Scanner une photo de chantier"
+            onSecondary={() => navigate('/scanner')}
+          />
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-gray-400">Aucun résultat pour "{search}"</p>
+            <button onClick={() => { setSearch(''); setFilter('tous') }} className="text-chantier text-sm mt-2 hover:underline">
+              Réinitialiser les filtres
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {filtered.map(d => (
               <DevisCard
                 key={d.id}
                 item={d}
                 onClick={() => navigate(`/devis/${d.id}`)}
                 type="devis"
               />
-            ))
-          )}
-        </div>
-
-        {/* Empty CTA */}
-        {filtered.length === 0 && (
-          <button
-            onClick={() => navigate('/nouveau-devis')}
-            className="btn-primary w-full"
-          >
-            <Plus className="w-4 h-4 inline mr-2" />
-            Créer mon premier devis
-          </button>
+            ))}
+          </div>
         )}
       </div>
     </div>

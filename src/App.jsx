@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom'
 import BottomNav from './components/BottomNav'
 import Dashboard from './pages/Dashboard'
@@ -12,41 +11,24 @@ import Landing from './pages/Landing'
 import Auth from './pages/Auth'
 import Pricing from './pages/Pricing'
 import { BlogList, BlogPost } from './pages/Blog'
-import { supabase, getCurrentUser } from './lib/supabase'
+import { DataProvider, useData } from './contexts/DataContext'
+
+function LoadingScreen() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-navy-900">
+      <div className="animate-spin w-8 h-8 border-2 border-chantier border-t-transparent rounded-full" />
+    </div>
+  )
+}
 
 function ProtectedRoute({ children }) {
-  const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    getCurrentUser().then(u => {
-      setUser(u)
-      setLoading(false)
-    })
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user || null)
-    })
-
-    return () => subscription?.unsubscribe()
-  }, [])
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-2 border-chantier border-t-transparent rounded-full" />
-      </div>
-    )
-  }
-
-  if (!user) {
-    return <Navigate to="/auth" replace />
-  }
-
+  const { user, loading } = useData()
+  if (loading) return <LoadingScreen />
+  // On autorise l'accès même sans user (mode démo local)
   return children
 }
 
-function App() {
+function AppContent() {
   const location = useLocation()
   const hideNavRoutes = ['/', '/auth', '/pricing']
   const blogRoutes = location.pathname.startsWith('/blog')
@@ -73,6 +55,14 @@ function App() {
       </Routes>
       {showNav && <BottomNav />}
     </div>
+  )
+}
+
+function App() {
+  return (
+    <DataProvider>
+      <AppContent />
+    </DataProvider>
   )
 }
 

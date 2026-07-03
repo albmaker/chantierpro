@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, FileCheck, AlertCircle } from 'lucide-react'
 import Header from '../components/Header'
 import DevisCard from '../components/DevisCard'
-import { DEMO_FACTURES } from '../data/ouvrages'
+import EmptyState from '../components/EmptyState'
+import { useData } from '../contexts/DataContext'
+import { computeTotals } from '../components/DevisCard'
 
 const filters = [
   { id: 'tous', label: 'Toutes' },
@@ -14,26 +16,37 @@ const filters = [
 
 export default function FacturesList() {
   const navigate = useNavigate()
+  const { factures, devis } = useData()
   const [filter, setFilter] = useState('tous')
+  const [search, setSearch] = useState('')
 
-  const filtered = filter === 'tous'
-    ? DEMO_FACTURES
-    : DEMO_FACTURES.filter(f => f.statut === filter)
+  const filtered = useMemo(() => {
+    return factures.filter(f => {
+      const matchFilter = filter === 'tous' || f.statut === filter
+      const searchLower = search.toLowerCase().trim()
+      const matchSearch = !searchLower ||
+        (f.client_nom || '').toLowerCase().includes(searchLower) ||
+        (f.numero || '').toLowerCase().includes(searchLower)
+      return matchFilter && matchSearch
+    })
+  }, [factures, filter, search])
 
-  // Stats
-  const totalImpaye = DEMO_FACTURES
+  const totalImpaye = factures
     .filter(f => f.statut === 'en_attente' || f.statut === 'en_retard')
-    .reduce((s, f) => s + f.lignes.reduce((sum, l) => sum + l.qty * l.priceHT * (1 + l.tva/100), 0), 0)
+    .reduce((s, f) => s + computeTotals(f.lignes).totalTTC, 0)
 
   return (
     <div className="pb-24">
       <Header
         title="Mes factures"
         subtitle="Compatible Factur-X 2026 ✅"
+        search={search}
+        onSearchChange={setSearch}
         action={
           <button
-            onClick={() => navigate('/nouveau-devis')}
+            onClick={() => navigate('/devis')}
             className="w-10 h-10 rounded-full bg-chantier flex items-center justify-center shadow-lg shadow-chantier/30 active:scale-95"
+            aria-label="Nouvelle facture"
           >
             <Plus className="w-5 h-5 text-white" />
           </button>
@@ -55,7 +68,7 @@ export default function FacturesList() {
         </div>
 
         {/* Total impayé */}
-        {totalImpaye > 0 && (
+        {factures.length > 0 && totalImpaye > 0 && (
           <div className="card border border-red-500/30">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -68,34 +81,45 @@ export default function FacturesList() {
         )}
 
         {/* Filtres */}
-        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-          {filters.map(f => (
-            <button
-              key={f.id}
-              onClick={() => setFilter(f.id)}
-              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-                filter === f.id
-                  ? 'bg-chantier text-white'
-                  : 'bg-navy-700 text-gray-300 hover:bg-navy-600'
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
+        {factures.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+            {filters.map(f => (
+              <button
+                key={f.id}
+                onClick={() => setFilter(f.id)}
+                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap ${
+                  filter === f.id ? 'bg-chantier text-white' : 'bg-navy-700 text-gray-300'
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Liste */}
-        <div className="space-y-2">
-          {filtered.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-gray-400">Aucune facture dans cette catégorie</p>
-            </div>
-          ) : (
-            filtered.map(f => (
+        {factures.length === 0 ? (
+          <EmptyState
+            icon={FileCheck}
+            title="Aucune facture pour l'instant"
+            description="Les factures sont créées à partir d'un devis accepté par votre client."
+            actionLabel="Voir mes devis"
+            onAction={() => navigate('/devis')}
+          />
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-gray-400">Aucun résultat pour "{search}"</p>
+            <button onClick={() => { setSearch(''); setFilter('tous') }} className="text-chantier text-sm mt-2 hover:underline">
+              Réinitialiser les filtres
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {filtered.map(f => (
               <DevisCard key={f.id} item={f} onClick={() => {}} type="facture" />
-            ))
-          )}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
