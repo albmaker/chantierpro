@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Sparkles, Wrench, Plus, Trash2, Save, X, ChevronRight, ChevronLeft, Droplet, Zap, PaintBucket, Hammer, AlertCircle } from 'lucide-react'
 import { useData } from '../contexts/DataContext'
-import { OUVRAGES_BTP } from '../data/empty'
+import { OUVRAGES_BTP } from '../data/ouvrages'
 
 const METIERS = [
   { id: 'plomberie', label: 'Plomberie', icon: Droplet, color: 'blue' },
@@ -352,7 +352,7 @@ export default function WizardDevis() {
                 <div>
                   <p className="text-sm font-bold text-slate-900">Devis auto-g\u00e9n\u00e9r\u00e9</p>
                   <p className="text-xs text-slate-600 mt-1">
-                    {generatedLignes.length} ouvrage{generatedLignes.length > 1 ? 's' : ''} pr\u00eat{s}. Tu peux modifier.
+                    {generatedLignes.length} ouvrage{generatedLignes.length > 1 ? 's' : ''} prêt{generatedLignes.length > 1 ? 's' : ''}. Tu peux modifier.
                   </p>
                 </div>
               </div>

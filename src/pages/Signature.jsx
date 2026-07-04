@@ -5,7 +5,7 @@ import { useData } from '../contexts/DataContext'
 import { generatePDF } from '../lib/pdfGenerator'
 
 // Page de signature \u00e9lectronique : l'artisan dessine sa signature et on l'int\u00e8gre dans le PDF
-export default function Signature() {
+const { profile, getProfile, saveProfile } = useData()
   const navigate = useNavigate()
   const { profile, getProfile } = useData()
   const canvasRef = useRef(null)
@@ -54,21 +54,18 @@ export default function Signature() {
     setHasSignature(false)
   }
 
-  function saveSignature() {
-    if (!hasSignature) {
-      alert('Dessine ta signature d\'abord')
-      return
-    }
-    const canvas = canvasRef.current
-    const dataUrl = canvas.toDataURL('image/png')
-    // Stocke la signature dans le profil
-    const updatedProfile = { ...getProfile(), signature: dataUrl }
-    profile && Object.assign(profile, updatedProfile)
-    // Note: en prod, on sauvegarderait via saveProfile
-    localStorage.setItem('chantierpro_profile', JSON.stringify(updatedProfile))
-    alert('✅ Signature enregistrée ! Elle apparaîtra sur tous tes prochains PDF.')
-    navigate('/parametres')
+  async function saveSignature() {
+  if (!hasSignature) {
+    alert('Dessine ta signature d\'abord')
+    return
   }
+  const canvas = canvasRef.current
+  const dataUrl = canvas.toDataURL('image/png')
+  const updatedProfile = { ...getProfile(), signature: dataUrl }
+  await saveProfile(updatedProfile)
+  alert('✅ Signature enregistrée ! Elle apparaîtra sur tous tes prochains PDF.')
+  navigate('/parametres')
+}
 
   return (
     <div className="pb-24">
