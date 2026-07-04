@@ -59,10 +59,14 @@ function AppContent() {
         <Route path="/clients" element={<Clients />} />
         <Route path="/stats" element={<Stats />} />
         <Route path="/parametres" element={<Parametres />} />
+        <Route path="/profil" element={<Parametres />} />
+
         <Route path="/signature" element={<Signature />} />
         <Route path="/messages" element={<Messages />} />
         <Route path="/objectifs" element={<Objectifs />} />
-        <Route path="/profil" element={<Profil />} />
+
+        <Route path="/compte" element={<Profil />} />
+
         <Route path="/conseil" element={<ConseilIA />} />
         <Route path="/export" element={<ExportData />} />
 
